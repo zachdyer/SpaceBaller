@@ -1,9 +1,11 @@
 let maxSpaceStationImages = 7
-let spaceStationImage = Math.floor(Math.random() * maxSpaceStationImages) + 1
+let maxStarSystemImages = 5
+let starSystem = generateStarSystem()
 let hudTitle = document.querySelector('#hud-title')
-hudTitle.textContent = `Space Station ${spaceStationImage}`
+let hudLocation = document.querySelector('#hud-location')
+hudTitle.textContent = starSystem.name
 let pilotWindow = document.querySelector('#pilot-window')
-pilotWindow.style.backgroundImage = `url(../img/space-station-${spaceStationImage}.png)`
+pilotWindow.style.backgroundImage = starSystem.image
 let navigation = document.querySelector('#navigation')
 let spaceStations = []
 let maxStations = Math.floor(Math.random() * 10) + 1
@@ -57,6 +59,48 @@ function updateListContent() {
     item.querySelector('span').textContent = `${stationName} ${Math.abs(stationDistance - playerSunDistance)} Mm`;
   });
 }
+function generateStarSystem() {
+  const word1 = [
+    "Alpha",
+    "Sirius",
+    "Betelgeuse",
+    "Proxima",
+    "Vega",
+    "Polaris",
+    "Antares",
+    "Deneb",
+    "Epsilon",
+    "Tau",
+    "Wolf",
+    "Kepler",
+    "Trappist",
+    "Gliese",
+    "HD",
+    "Eta",
+    "Zeta",
+    "Sagittarius",
+    "Cygnus",
+    "Orion"
+  ]
+  const word2 = [
+    "Eridani",
+    "Ceti",
+    "359",
+    "186",
+    "1",
+    "581",
+    "209458",
+    "Carinae",
+    "Reticuli",
+    "A*",
+    "X-1",
+    "Nebula"
+  ]
+  return {
+    name: `${word1[Math.floor(Math.random() * word1.length)]} ${word2[Math.floor(Math.random() * word2.length)]}`,
+    image: `url(../img/star-system-${Math.floor(Math.random() * maxStarSystemImages) + 1}.png)`
+  }
+}
 for (let i = 0; i < maxStations; i++) {
   spaceStations.push(generateStation())
 }
@@ -70,7 +114,7 @@ spaceStations.forEach(station => {
   li.setAttribute('data-station-distance', station.starDistancePerMillionMiles);
   stationInfo.textContent = `${station.name} ${station.starDistancePerMillionMiles - playerSunDistance} Mm`;
   const button = document.createElement('button');
-  button.setAttribute('class', 'btn btn-secondary float-end');
+  button.setAttribute('class', 'btn btn-primary float-end btn-navigate');
   button.textContent = 'Navigate';
   button.addEventListener('click', () => {
     // Remove highlighting from all list items
@@ -78,6 +122,10 @@ spaceStations.forEach(station => {
     listItems.forEach(item => {
       item.classList.remove('active');
     });
+    const navButtons = document.querySelectorAll('.btn-navigate')
+    navButtons.forEach(btn => {
+      btn.disabled = false
+    })
     clearInterval(navigationInterval)
     // Update player distance every millisecond
     navigationInterval = setInterval(() => {
@@ -85,10 +133,11 @@ spaceStations.forEach(station => {
       if (playerSunDistance < station.starDistancePerMillionMiles) playerSunDistance += 1;
       else
         playerSunDistance -= 1
+      hudLocation.textContent = station.name;
       if (station.starDistancePerMillionMiles - playerSunDistance == 0) {
         clearInterval(navigationInterval)
         pilotWindow.style.backgroundImage = station.image;
-        hudTitle.textContent = station.name;
+        button.disabled = true;
       }
       updateListContent();
     }, 1);
