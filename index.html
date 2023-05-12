@@ -14,7 +14,7 @@
   </head>
   <body>
     <div class="container-fluid p-5 ship-hull vh-100">
-      <div class="mb-4 bg-body-tertiary rounded-3 h-50" id="pilot-window">
+      <div class="mb-4 rounded-3 h-50" id="pilot-window">
         <div class="container-fluid opacity-75">
           <h1 id="hud-title">Space Station</h1>
           <p class="col-md-8">A space station.</p>
@@ -24,12 +24,10 @@
       <div class="row">
         <div class="col-lg-4">
           <div class="screen bg-dark text-white rounded p-3">
-            <h2>Screen 1</h2>
+            <h2>Navigation</h2>
             <div class="spaceship-controls">
               <!-- Add spaceship controls here -->
-              <button class="btn btn-primary">Launch</button>
-              <div class="joystick"></div>
-              <input type="range" min="0" max="100" value="50" class="slider" />
+              <div class="btn-group-vertical" id="navigation"></div>
             </div>
           </div>
         </div>
