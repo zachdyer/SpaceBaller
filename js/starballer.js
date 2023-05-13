@@ -7,10 +7,13 @@ let navigation = document.querySelector('#navigation')
 let spaceStations = []
 let playerSunDistance = 0
 let navigationInterval
-let playerStarSystem = 0
+let playerStarSystem = 1
 let rng = new Math.seedrandom(playerStarSystem);
 let starSystem = generateStarSystem()
 let maxStations = Math.floor(rng() * maxSpaceStationImages) + 1
+let fuelTankCapacity = 5000
+let fuelLevel = fuelTankCapacity
+let fuelTankBar = document.querySelector('#fuel-tank')
 hudTitle.textContent = starSystem.name
 pilotWindow.style.backgroundImage = starSystem.image
 
@@ -132,6 +135,8 @@ spaceStations.forEach(station => {
     })
     clearInterval(navigationInterval)
     // Update player distance every millisecond
+    const lightspeed = 5370
+    const hackerspeed = 1
     navigationInterval = setInterval(() => {
       // Increment player distance by 1 Mm per millisecond
       if (playerSunDistance < station.starDistancePerMillionMiles) playerSunDistance += 1;
@@ -144,7 +149,9 @@ spaceStations.forEach(station => {
         button.disabled = true;
       }
       updateListContent();
-    }, 1);
+      fuelLevel--
+      fuelTankBar.style.width = `${Math.floor(fuelLevel / fuelTankCapacity * 100)}%`
+    }, hackerspeed);
     // Highlight the clicked list item
     li.classList.add('active');
     pilotWindow.style.backgroundImage = 'url(../img/warp.gif)';
