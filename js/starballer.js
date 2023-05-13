@@ -1,16 +1,19 @@
 let maxSpaceStationImages = 7
 let maxStarSystemImages = 5
-let starSystem = generateStarSystem()
 let hudTitle = document.querySelector('#hud-title')
 let hudLocation = document.querySelector('#hud-location')
-hudTitle.textContent = starSystem.name
 let pilotWindow = document.querySelector('#pilot-window')
-pilotWindow.style.backgroundImage = starSystem.image
 let navigation = document.querySelector('#navigation')
 let spaceStations = []
-let maxStations = Math.floor(Math.random() * 10) + 1
 let playerSunDistance = 0
 let navigationInterval
+let playerStarSystem = 0
+let rng = new Math.seedrandom(playerStarSystem);
+let starSystem = generateStarSystem()
+let maxStations = Math.floor(rng() * maxSpaceStationImages) + 1
+hudTitle.textContent = starSystem.name
+pilotWindow.style.backgroundImage = starSystem.image
+
 function generateStation() {
   const spaceStationNames1 = [
     "Lunaris",
@@ -46,18 +49,10 @@ function generateStation() {
   ]
 
   return {
-    name: `${spaceStationNames1[Math.floor(Math.random() * spaceStationNames1.length)]} ${spaceStationNames2[Math.floor(Math.random() * spaceStationNames2.length)]}`,
-    image: `url(../img/space-station-${Math.floor(Math.random() * maxSpaceStationImages) + 1}.png)`,
-    starDistancePerMillionMiles: Math.floor(Math.random() * 5000)
+    name: `${spaceStationNames1[Math.floor(rng() * spaceStationNames1.length)]} ${spaceStationNames2[Math.floor(rng() * spaceStationNames2.length)]}`,
+    image: `url(../img/space-station-${Math.floor(rng() * maxSpaceStationImages) + 1}.png)`,
+    starDistancePerMillionMiles: Math.floor(rng() * 5000)
   }
-}
-function updateListContent() {
-  const listItems = document.querySelectorAll('.list-group-item');
-  listItems.forEach(item => {
-    const stationName = item.getAttribute('data-station-name');
-    const stationDistance = item.getAttribute('data-station-distance');
-    item.querySelector('span').textContent = `${stationName} ${Math.abs(stationDistance - playerSunDistance)} Mm`;
-  });
 }
 function generateStarSystem() {
   const word1 = [
@@ -97,10 +92,19 @@ function generateStarSystem() {
     "Nebula"
   ]
   return {
-    name: `${word1[Math.floor(Math.random() * word1.length)]} ${word2[Math.floor(Math.random() * word2.length)]}`,
-    image: `url(../img/star-system-${Math.floor(Math.random() * maxStarSystemImages) + 1}.png)`
+    name: `${word1[Math.floor(rng() * word1.length)]} ${word2[Math.floor(rng() * word2.length)]}`,
+    image: `url(../img/star-system-${Math.floor(rng() * maxStarSystemImages) + 1}.png)`
   }
 }
+function updateListContent() {
+  const listItems = document.querySelectorAll('.list-group-item');
+  listItems.forEach(item => {
+    const stationName = item.getAttribute('data-station-name');
+    const stationDistance = item.getAttribute('data-station-distance');
+    item.querySelector('span').textContent = `${stationName} ${Math.abs(stationDistance - playerSunDistance)} Mm`;
+  });
+}
+
 for (let i = 0; i < maxStations; i++) {
   spaceStations.push(generateStation())
 }
