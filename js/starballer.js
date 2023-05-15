@@ -14,8 +14,7 @@ let maxStations = Math.floor(rng() * maxSpaceStationImages) + 1
 let fuelTankCapacity = 5000
 let fuelLevel = fuelTankCapacity
 let fuelTankBar = document.querySelector('#fuel-tank')
-hudTitle.textContent = starSystem.name
-pilotWindow.style.backgroundImage = starSystem.image
+const refuel = document.querySelector('#refuel')
 
 function generateStation() {
   const spaceStationNames1 = [
@@ -107,7 +106,16 @@ function updateListContent() {
     item.querySelector('span').textContent = `${stationName} ${Math.abs(stationDistance - playerSunDistance)} Mm`;
   });
 }
+function setFuelLevel(amount){
+  fuelLevel = amount
+  fuelTankBar.style.width = `${Math.floor(fuelLevel / fuelTankCapacity * 100)}%`
+}
+refuel.addEventListener('click', ()=>{
+  setFuelLevel(fuelTankCapacity)
+})
 
+hudTitle.textContent = starSystem.name
+pilotWindow.style.backgroundImage = starSystem.image
 for (let i = 0; i < maxStations; i++) {
   spaceStations.push(generateStation())
 }
@@ -139,28 +147,35 @@ spaceStations.forEach(station => {
     const hackerspeed = 1
     navigationInterval = setInterval(() => {
       // Increment player distance by 1 Mm per millisecond
-      if (playerSunDistance < station.starDistancePerMillionMiles) playerSunDistance += 1;
-      else
-        playerSunDistance -= 1
-      hudLocation.textContent = station.name;
-      if (station.starDistancePerMillionMiles - playerSunDistance == 0) {
+      if(fuelLevel > 0) {
+        if (playerSunDistance < station.starDistancePerMillionMiles) playerSunDistance += 1;
+        else
+          playerSunDistance -= 1
+        hudLocation.textContent = station.name;
+        if (station.starDistancePerMillionMiles - playerSunDistance == 0) {
+          clearInterval(navigationInterval)
+          pilotWindow.style.backgroundImage = station.image;
+          button.disabled = true;
+          fuelTankBar.classList.remove('progress-bar-animated')
+        }
+        updateListContent();
+        setFuelLevel(fuelLevel - 1)
+      } else {
         clearInterval(navigationInterval)
-        pilotWindow.style.backgroundImage = station.image;
-        button.disabled = true;
+        fuelTankBar.classList.remove('progress-bar-animated')
+        pilotWindow.style.backgroundImage = starSystem.image
       }
-      updateListContent();
-      fuelLevel--
-      fuelTankBar.style.width = `${Math.floor(fuelLevel / fuelTankCapacity * 100)}%`
+      
     }, hackerspeed);
     // Highlight the clicked list item
     li.classList.add('active');
     pilotWindow.style.backgroundImage = 'url(../img/warp.gif)';
+    fuelTankBar.classList.add('progress-bar-animated')
   });
 
   li.appendChild(stationInfo);
   li.appendChild(button);
   navigation.appendChild(li);
 });
-
 
 
