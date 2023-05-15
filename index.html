@@ -22,12 +22,12 @@
               <div class="row align-items-start h-100">
                 <div class="col-3 d-flex flex-column h-100">
                   <h1 id="hud-title">Star System Info</h1>
-                  <p id="hud-location">Location Info</p>
-                  <div class="row align-items-center mt-auto">
-                    <div class="col-auto">
+                  <p id="hud-location">Location Info...</p>
+                  <div class="d-flex align-items-center mt-auto">
+                    <div class="flex-shrink-0">
                       <i class="bi bi-fuel-pump-fill"></i>
                     </div>
-                    <div class="col">
+                    <div class="flex-grow-1 ms-3">
                       <div class="progress">
                         <div
                           class="progress-bar progress-bar-striped bg-success"
@@ -38,8 +38,42 @@
                     </div>
                   </div>
                 </div>
-                <div class="col-6"></div>
-                <div class="col-3"></div>
+                <div class="col-6">
+                  <div id="log">
+                    <div class="card mt-2 text-bg-dark">
+                      <div class="card-body">
+                        <div class="d-flex align-items-center">
+                          <div class="flex-shrink-0">
+                            <img
+                              src="img/sci-fi-mechanic (1).png"
+                              alt="..."
+                              class="rounded-circle"
+                              width="50"
+                            />
+                          </div>
+                          <div class="flex-grow-1 ms-3">
+                            We have received your fuel request. Stand by as we
+                            refuel.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-3 align-self-center">
+                  <div id="npc">
+                    <img
+                      src="img/sci-fi-mechanic (1).png"
+                      alt=""
+                      class="img-fluid img-thumbnail"
+                      id="npc-avatar"
+                    />
+                    <p class="text-center" id="npc-name">
+                      John Doe<br />
+                      <span id="npc-dept">Fuel Services</span>
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -61,7 +95,9 @@
             <h2>Comms</h2>
             <div class="spaceship-controls">
               <!-- Add spaceship controls here -->
-              <button class="btn btn-primary" id="refuel">Refuel</button>
+              <button class="btn btn-primary" id="refuel">
+                Request Refuel
+              </button>
             </div>
           </div>
         </div>

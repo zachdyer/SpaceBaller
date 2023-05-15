@@ -15,6 +15,8 @@ let fuelTankCapacity = 5000
 let fuelLevel = fuelTankCapacity
 let fuelTankBar = document.querySelector('#fuel-tank')
 const refuel = document.querySelector('#refuel')
+const npc = document.querySelector('#npc')
+const log = document.querySelector('#log')
 
 function generateStation() {
   const spaceStationNames1 = [
@@ -110,7 +112,16 @@ function setFuelLevel(amount){
   fuelLevel = amount
   fuelTankBar.style.width = `${Math.floor(fuelLevel / fuelTankCapacity * 100)}%`
 }
+function displayComms(){
+  npc.style.display = 'block'
+  log.style.display = 'block'
+}
+function hideComms() {
+  npc.style.display = 'none'
+  log.style.display = 'none'
+}
 refuel.addEventListener('click', ()=>{
+  displayComms()
   setFuelLevel(fuelTankCapacity)
 })
 
@@ -171,6 +182,7 @@ spaceStations.forEach(station => {
     li.classList.add('active');
     pilotWindow.style.backgroundImage = 'url(../img/warp.gif)';
     fuelTankBar.classList.add('progress-bar-animated')
+    hideComms()
   });
 
   li.appendChild(stationInfo);
