@@ -57,6 +57,9 @@ body {
 #npc {
   display: none;
 }
+#npc-avatar {
+  background-size: cover;
+}
 
 @keyframes sway {
   0% {

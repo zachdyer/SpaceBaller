@@ -30,7 +30,7 @@
                     <div class="flex-grow-1 ms-3">
                       <div class="progress">
                         <div
-                          class="progress-bar progress-bar-striped bg-success"
+                          class="progress-bar progress-bar-striped bg-warning"
                           style="width: 100%"
                           id="fuel-tank"
                         ></div>
@@ -49,9 +49,10 @@
                               alt="..."
                               class="rounded-circle"
                               width="50"
+                              id="npc-chat-avatar"
                             />
                           </div>
-                          <div class="flex-grow-1 ms-3">
+                          <div class="flex-grow-1 ms-3" id="npc-message">
                             We have received your fuel request. Stand by as we
                             refuel.
                           </div>
@@ -61,17 +62,13 @@
                   </div>
                 </div>
                 <div class="col-3 align-self-center">
-                  <div id="npc">
-                    <img
-                      src="img/sci-fi-mechanic (1).png"
-                      alt=""
-                      class="img-fluid img-thumbnail"
+                  <div id="npc" class="text-center">
+                    <div
+                      class="img-fluid img-thumbnail ratio ratio-1x1"
                       id="npc-avatar"
-                    />
-                    <p class="text-center" id="npc-name">
-                      John Doe<br />
-                      <span id="npc-dept">Fuel Services</span>
-                    </p>
+                    /></div>
+                    <p class="m-0" id="npc-name">John Doe</p>
+                    <p id="npc-dept">Fuel Services</p>
                   </div>
                 </div>
               </div>
