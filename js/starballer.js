@@ -25,6 +25,11 @@ const npcDept = document.querySelector('#npc-dept')
 let emergencyFuelPilot = generateNPC('pilot', false, 'Emergency Fuel Services')
 let isInFlight = false
 let playerStation
+const playerImage = `img/player-spaceship.png`
+const playerShipName = generateShipName()
+const emergencyFuelBtn = document.createElement('button')
+const shipComms = document.querySelector('#ship-comms')
+const starportFuelBtn = document.createElement('button')
 
 function generateStation() {
   const spaceStationNames1 = ["Lunaris", "Stellar", "Nebula", "Galactic", "Astrocore", "Celestial", "Orion", "Cosmos", "Infinity", "Nova", "Serenity", "Quantum", "Interstellar", "Aurora", "Cosmic"]
@@ -74,19 +79,18 @@ function generateNPC(type, procedural, dept = ''){
   let imgMax
   let imgPick
   let npcName
-  switch(type) {
-    case 'pilot':
-      name1 = ["Max", "Stella", "Aurora", "Jet", "Nova", "Rex", "Luna", "Cosmo", "Zara", "Orion", "Vega", "Nyx", "Apollo", "Nova", "Stellar", "Raven", "Galaxy", "Axel", "Celeste", "Blaze"];
-      name2 = ["Nova", "Orion", "Blaze", "Phoenix", "Starstrider", "Nebula", "Stardust", "Falcon", "Warpwind", "Skyslicer", "Starfire", "Shadowpilot", "Starwing", "Nebulon", "Eclipse", "Starwind", "Stardancer", "Novaheart", "Starfrost", "Starglider"];
-      imgMax = 28
-      imgPick = (procedural) ? Math.floor(rng() * imgMax) + 1 : Math.floor(Math.random() * imgMax) + 1
-      npcName = (procedural) ? `${name1[Math.floor(rng() * name1.length)]} ${name2[Math.floor(rng() * name2.length)]}` : `${name1[Math.floor(Math.random() * name1.length)]} ${name2[Math.floor(Math.random() * name2.length)]}`
-    case 'mechanic':
-      name1 = ["Axel", "Sprocket", "Wrench", "Gizmo", "Spark", "Bolt", "Cog", "Ratchet", "Gear", "Spanner", "Socket", "Piston", "Widget", "Crux", "Machina"];
-      name2 = ["Cyber", "Tech", "Byte", "Circuit", "Nexus", "Matrix", "Drone", "Pulse", "Nano", "Vortex", "Probe", "Neon", "Synth", "Gadget", "Jolt"];
-      imgMax = 9
-      imgPick = (procedural) ? Math.floor(rng() * imgMax) + 1 : Math.floor(Math.random() * imgMax) + 1
-      npcName = (procedural) ? `${name1[Math.floor(rng() * name1.length)]} ${name2[Math.floor(rng() * name2.length)]}` : `${name1[Math.floor(Math.random() * name1.length)]} ${name2[Math.floor(Math.random() * name2.length)]}`
+  if(type == 'pilot') {
+    name1 = ["Max", "Stella", "Aurora", "Jet", "Nova", "Rex", "Luna", "Cosmo", "Zara", "Orion", "Vega", "Nyx", "Apollo", "Nova", "Stellar", "Raven", "Galaxy", "Axel", "Celeste", "Blaze"];
+    name2 = ["Nova", "Orion", "Blaze", "Phoenix", "Starstrider", "Nebula", "Stardust", "Falcon", "Warpwind", "Skyslicer", "Starfire", "Shadowpilot", "Starwing", "Nebulon", "Eclipse", "Starwind", "Stardancer", "Novaheart", "Starfrost", "Starglider"];
+    imgMax = 28
+    imgPick = (procedural) ? Math.floor(rng() * imgMax) + 1 : Math.floor(Math.random() * imgMax) + 1
+    npcName = (procedural) ? `${name1[Math.floor(rng() * name1.length)]} ${name2[Math.floor(rng() * name2.length)]}` : `${name1[Math.floor(Math.random() * name1.length)]} ${name2[Math.floor(Math.random() * name2.length)]}`
+  } else if (type == 'mechanic') {
+    name1 = ["Axel", "Sprocket", "Wrench", "Gizmo", "Spark", "Bolt", "Cog", "Ratchet", "Gear", "Spanner", "Socket", "Piston", "Widget", "Crux", "Machina"];
+    name2 = ["Cyber", "Tech", "Byte", "Circuit", "Nexus", "Matrix", "Drone", "Pulse", "Nano", "Vortex", "Probe", "Neon", "Synth", "Gadget", "Jolt"];
+    imgMax = 9
+    imgPick = (procedural) ? Math.floor(rng() * imgMax) + 1 : Math.floor(Math.random() * imgMax) + 1
+    npcName = (procedural) ? `${name1[Math.floor(rng() * name1.length)]} ${name2[Math.floor(rng() * name2.length)]}` : `${name1[Math.floor(Math.random() * name1.length)]} ${name2[Math.floor(Math.random() * name2.length)]}`
   }
   return {
     name: npcName,
@@ -94,26 +98,54 @@ function generateNPC(type, procedural, dept = ''){
     dept: dept
   }
 }
-refuel.addEventListener('click', ()=>{
-  if(fuelLevel <= 0) {
-    npcAvatar.style.backgroundImage = `url('${emergencyFuelPilot.image}')`
-    npcChatAvatar.src = emergencyFuelPilot.image
-    npcMessage.textContent = `We received your emergency fuel request. Stand by as we refuel.`
-    npcName.textContent = emergencyFuelPilot.name
-    npcDept.textContent = emergencyFuelPilot.dept
-    displayComms()
-    setFuelLevel(fuelTankCapacity)
-  } else if (fuelLevel != fuelTankCapacity && !isInFlight){
-    npcAvatar.style.backgroundImage = `url('${playerStation.mechanicNPC.image}')`
-    npcChatAvatar.src = playerStation.mechanicNPC.image
-    npcMessage.textContent = `Welcome to ${playerStation.mechanicNPC.dept}. Stand by as we refuel.`
-    npcName.textContent = playerStation.mechanicNPC.name
-    npcDept.textContent = playerStation.mechanicNPC.dept
-    displayComms()
-    setFuelLevel(fuelTankCapacity)
-  } 
-  refuel.disabled = true
-})
+function emergencyFuelRequest(){
+  npcAvatar.style.backgroundImage = `url('${emergencyFuelPilot.image}')`
+  npcChatAvatar.src = emergencyFuelPilot.image
+  npcMessage.textContent = `We received your emergency fuel request. Stand by as we refuel.`
+  npcName.textContent = emergencyFuelPilot.name
+  npcDept.textContent = emergencyFuelPilot.dept
+  displayComms()
+  emergencyFuelBtn.textContent = 'Confirm'
+  emergencyFuelBtn.removeEventListener('click', emergencyFuelRequest)
+  emergencyFuelBtn.addEventListener('click', emergencyFuelConfirmation)
+}
+function generateShipName() {
+    let words = [
+      ["Starfire", "Cosmosphere", "Astroblade", "Stellaris", "Galactron", "Nebula", "Celestial", "Interstellar", "Lunar", "Cosmic", "Orion's", "Nova", "Quantum", "Eclipse", "Astroscout", "Cosmic", "Infinity", "Stardust", "Hypernova", "Solar"],
+      ["Voyager", "Wing", "Phoenix", "Sentinel", "Serpent", "Fury", "Explorer", "Dawn", "Raider", "Crusader", "Falcon", "Voyager", "Flare"]
+    ]
+    return `${words[0][Math.floor(rng()*words[0].length)]} ${words[1][Math.floor(rng()*words[1].length)]}`
+}
+function starportFuelConfirmation() {
+  setFuelLevel(fuelTankCapacity)
+  npcMessage.textContent = `We have replenished your gas tank. You are good to go. Happy hunting.`
+  starportFuelBtn.style.display = 'none'
+  starportFuelBtn.removeEventListener(starportFuelConfirmation)
+  starportFuelBtn.addEventListener('click', starportFuelRequest)
+  starportFuelBtn.textContent = playerStation.mechanicNPC.dept
+}
+function starportFuelRequest(){
+  npcAvatar.style.backgroundImage = `url('${playerStation.mechanicNPC.image}')`
+  npcChatAvatar.src = playerStation.mechanicNPC.image
+  npcMessage.textContent = `We received your emergency fuel request. Stand by as we refuel.`
+  npcName.textContent = playerStation.mechanicNPC.name
+  npcDept.textContent = playerStation.mechanicNPC.dept
+  displayComms()
+  starportFuelBtn.textContent = 'Confirm'
+  starportFuelBtn.removeEventListener('click', starportFuelRequest)
+  starportFuelBtn.addEventListener('click', emergencyFuelConfirmation)
+}
+function emergencyFuelConfirmation(){
+  setFuelLevel(fuelTankCapacity)
+  npcMessage.textContent = `We have replenished your gas tank. You are good to go. Happy hunting.`
+  emergencyFuelBtn.style.display = 'none'
+  emergencyFuelBtn.removeEventListener('click', emergencyFuelConfirmation)
+  emergencyFuelBtn.addEventListener('click', emergencyFuelRequest)
+  emergencyFuelBtn.textContent = 'Emergency Fuel Request'
+}
+
+emergencyFuelBtn.addEventListener('click', emergencyFuelRequest)
+starportFuelBtn.addEventListener('click', starportFuelRequest)
 
 hudTitle.textContent = starSystem.name
 pilotWindow.style.backgroundImage = starSystem.image
@@ -161,17 +193,43 @@ spaceStations.forEach(station => {
           button.disabled = true;
           fuelTankBar.classList.remove('progress-bar-animated')
           isInFlight = false
-          refuel.disabled = isInFlight
           playerStation = station
+          starportFuelBtn.textContent = playerStation.mechanicNPC.dept
+          starportFuelBtn.style.display = 'block'
+          starportFuelBtn.addEventListener('click', ()=>{
+            npcAvatar.style.backgroundImage = `url('${playerStation.mechanicNPC.image}')`
+            npcChatAvatar.src = playerStation.mechanicNPC.image
+            npcMessage.textContent = `Welcome to ${playerStation.mechanicNPC.dept}. What can we do for you?`
+            npcName.textContent = playerStation.mechanicNPC.name
+            npcDept.textContent = playerStation.mechanicNPC.dept
+            displayComms()
+            starportFuelBtn.textContent = 'Refuel'
+            starportFuelBtn.style.display = 'block'
+            starportFuelBtn.addEventListener('click', ()=>{
+              setFuelLevel(fuelTankCapacity)
+              npcMessage.textContent = `You got a full tank. Thanks for using ${playerStation.mechanicNPC.dept}. Have a great day.`
+              starportFuelBtn.style.display = 'none'
+            })
+          })
         }
         updateListContent()
         setFuelLevel(fuelLevel - 1)
       } else {
+        // When player runs out of fuel during travel
         clearInterval(navigationInterval)
         fuelTankBar.classList.remove('progress-bar-animated')
         pilotWindow.style.backgroundImage = starSystem.image
         isInFlight = false
-        refuel.disabled = isInFlight
+        emergencyFuelBtn.textContent = 'Emergency Fuel Request'
+        emergencyFuelBtn.style.display = 'block'
+        npcAvatar.style.backgroundImage = `url('${playerImage}')`
+        npcChatAvatar.src = playerImage
+        npcMessage.textContent = `Danger. Fuel levels are critical. Send a request for Emergency Fuel Services.`
+        npcName.textContent = playerShipName
+        npcDept.textContent = 'Planetary Cruiser'
+        displayComms()
+        emergencyFuelBtn.removeEventListener(emergencyFuelConfirmation)
+        emergencyFuelBtn.addEventListener('click', emergencyFuelRequest)
       }
       
     }, hackerspeed);
@@ -181,7 +239,7 @@ spaceStations.forEach(station => {
     fuelTankBar.classList.add('progress-bar-animated')
     hideComms()
     isInFlight = true
-    refuel.disabled = isInFlight
+    starportFuelBtn.style.display = 'none'
   });
 
   li.appendChild(stationInfo);
@@ -190,5 +248,12 @@ spaceStations.forEach(station => {
 });
 // The fuel level is initialized to update the fuel bar
 setFuelLevel(fuelLevel)
-
-
+emergencyFuelBtn.classList.add('btn')
+emergencyFuelBtn.classList.add('btn-primary')
+emergencyFuelBtn.textContent = `Request Emergency Fuel Services`
+shipComms.appendChild(emergencyFuelBtn)
+starportFuelBtn.classList.add('btn')
+starportFuelBtn.classList.add('btn-primary')
+starportFuelBtn.textContent = `Starport Fuel Services`
+starportFuelBtn.style.display = 'none'
+shipComms.appendChild(starportFuelBtn)
