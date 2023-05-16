@@ -25,7 +25,7 @@ const credits = document.querySelector('#credits')
 let player = {
   starDistance: 0,
   starID: 1,
-  image: `img/player-spaceship.png`,
+  image: `img/player-spaceship-2.png`,
   shipName: null,
   station: null,
   isInFlight: false,
@@ -48,7 +48,8 @@ function generateStation() {
     name: stationName,
     image: `url(../img/space-station-${Math.floor(rng() * maxSpaceStationImages) + 1}.png)`,
     starDistancePerMillionMiles: Math.floor(rng() * 5000),
-    mechanicNPC: generateNPC('mechanic', true, `${stationName} Ship Services`)
+    mechanicNPC: generateNPC('mechanic', true, `${stationName} Ship Services`),
+    jobNPC: generateNPC('office', true, `${stationName} Human Resources`)
   }
 }
 function generateStarSystem() {
@@ -98,6 +99,12 @@ function generateNPC(type, procedural, dept = ''){
     name1 = ["Axel", "Sprocket", "Wrench", "Gizmo", "Spark", "Bolt", "Cog", "Ratchet", "Gear", "Spanner", "Socket", "Piston", "Widget", "Crux", "Machina"];
     name2 = ["Cyber", "Tech", "Byte", "Circuit", "Nexus", "Matrix", "Drone", "Pulse", "Nano", "Vortex", "Probe", "Neon", "Synth", "Gadget", "Jolt"];
     imgMax = 9
+    imgPick = (procedural) ? Math.floor(rng() * imgMax) + 1 : Math.floor(Math.random() * imgMax) + 1
+    npcName = (procedural) ? `${name1[Math.floor(rng() * name1.length)]} ${name2[Math.floor(rng() * name2.length)]}` : `${name1[Math.floor(Math.random() * name1.length)]} ${name2[Math.floor(Math.random() * name2.length)]}`
+  } else if(type == 'office') {
+    name1 = ["Xander", "Luna", "Nyx", "Stella", "Nova", "Astra", "Zephyr", "Cyber", "Nebula", "Galaxy", "Cosmo", "Orion", "Serenity", "Celeste", "Raven", "Axel", "Aurora", "Blaze Nebula", "Phoenix", "Vega"];
+    name2 = ["Drake", "Vega", "Orion", "Steele", "Nexus", "Frost", "Silver", "Haze", "Nano", "Swift", "Stone", "Neon", "Starling", "Moon", "Nova", 'Eclipse', 'Mercury', 'Steel', 'Jetstream'];
+    imgMax = 25
     imgPick = (procedural) ? Math.floor(rng() * imgMax) + 1 : Math.floor(Math.random() * imgMax) + 1
     npcName = (procedural) ? `${name1[Math.floor(rng() * name1.length)]} ${name2[Math.floor(rng() * name2.length)]}` : `${name1[Math.floor(Math.random() * name1.length)]} ${name2[Math.floor(Math.random() * name2.length)]}`
   }
@@ -201,6 +208,22 @@ function fuelLevelAlert(){
 
 emergencyFuelBtn.addEventListener('click', emergencyFuelRequest)
 starportFuelBtn.addEventListener('click', starportFuelRequest)
+jobBoardBtn.addEventListener('click', ()=>{
+  if(jobBoardBtn.textContent == player.station.jobNPC.dept) {
+    npcAvatar.style.backgroundImage = `url('${player.station.jobNPC.image}')`
+    npcChatAvatar.src = player.station.jobNPC.image
+    npcMessage.textContent = `Welcome to ${player.station.jobNPC.dept}. Would you like a job?`
+    npcName.textContent = player.station.jobNPC.name
+    npcDept.textContent = player.station.jobNPC.dept
+    displayComms()
+    jobBoardBtn.textContent = 'Confirm'
+    starportFuelBtn.style.display = 'none'
+  } else {
+    npcMessage.textContent = `We will have a job available soon. Check back later.`
+    jobBoardBtn.textContent = player.station.jobNPC.dept
+    starportFuelBtn.style.display = 'block'
+  }
+})
 
 hudTitle.textContent = starSystem.name
 pilotWindow.style.backgroundImage = starSystem.image
@@ -251,6 +274,8 @@ spaceStations.forEach(station => {
           player.station = station
           starportFuelBtn.textContent = player.station.mechanicNPC.dept
           starportFuelBtn.style.display = 'block'
+          jobBoardBtn.style.display = 'block'
+          jobBoardBtn.textContent = player.station.jobNPC.dept
         }
         updateListContent()
         setFuelLevel(fuelLevel - 1)
@@ -283,10 +308,12 @@ spaceStations.forEach(station => {
 setFuelLevel(fuelLevel)
 emergencyFuelBtn.classList.add('btn')
 emergencyFuelBtn.classList.add('btn-primary')
+emergencyFuelBtn.classList.add('mb-2')
 emergencyFuelBtn.textContent = `Emergency Fuel Services`
 shipComms.appendChild(emergencyFuelBtn)
 starportFuelBtn.classList.add('btn')
 starportFuelBtn.classList.add('btn-primary')
+starportFuelBtn.classList.add('mb-2')
 starportFuelBtn.textContent = `Starport Fuel Services`
 starportFuelBtn.style.display = 'none'
 shipComms.appendChild(starportFuelBtn)
@@ -296,3 +323,5 @@ player.shipName = generateShipName()
 jobBoardBtn.classList.add('btn')
 jobBoardBtn.classList.add('btn-primary')
 jobBoardBtn.textContent = `Starport Mission Board`
+jobBoardBtn.style.display = 'none'
+shipComms.appendChild(jobBoardBtn)
