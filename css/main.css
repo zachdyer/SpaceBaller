@@ -21,7 +21,7 @@ body {
   background-color: black;
   position: relative;
   overflow: hidden;
-  height: 45vh;
+  min-height: 45vh;
 }
 
 #pilot-window::before {

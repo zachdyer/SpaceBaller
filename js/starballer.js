@@ -178,6 +178,7 @@ function emergencyFuelRequest(){
       player.credits - 10000
       player.setCredits(player.credits - 10000)
       clearComms()
+      powerNavigation(true)
     })
   })
 }
@@ -188,8 +189,7 @@ function generateShipName() {
     ]
     return `${words[0][Math.floor(rng()*words[0].length)]} ${words[1][Math.floor(rng()*words[1].length)]}`
 }
-function starportFuelRequest(button){
-  button.disabled = true
+function starportFuelRequest(){
   setFuelLevel(fuelTankCapacity)
   let sentence = [
     "Fuel replenishment complete. You're good to go. Safe travels!",
@@ -206,10 +206,14 @@ function starportFuelRequest(button){
   setMessage(pick(sentence, false))
   clearComms()
   commsButton('Exit', stationMainMenu)
+  powerNavigation(true)
 }
 function fuelLevelAlert(){
-  let message = `Danger. Fuel levels are critical. Send a request for Emergency Fuel Services.`
+  let message = `Danger. Fuel levels are critical. Shutting navigation system down. Recommend Sending a request signal for Emergency Fuel Services.`
   displayComms(player.image, player.shipName, player.shipModel, message)
+  clearComms()
+  commsButton('Send Emergency Distress Signal', emergencyServiceMenu)
+  powerNavigation(false)
 }
 function clearComms() {
   while (shipComms.firstChild) {
@@ -333,6 +337,12 @@ function emergencyTow(){
 function warpView(){
   pilotWindow.style.backgroundImage = 'url(../img/warp.gif)';
 }
+function powerNavigation(onoff){
+  const navButtons = document.querySelectorAll('.btn-navigate')
+  navButtons.forEach(button => {
+    button.disabled = !onoff
+  })
+}
 
 hudTitle.textContent = starSystem.name
 pilotWindow.style.backgroundImage = starSystem.image
@@ -412,4 +422,3 @@ setFuelLevel(fuelLevel)
 fuelLevelAlert()
 credits.textContent = player.credits
 player.shipName = generateShipName()
-commsButton('Send Emergency Distress Signal', emergencyServiceMenu)
