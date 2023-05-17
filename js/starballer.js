@@ -157,14 +157,10 @@ function emergencyFuelRequest(){
       'Emergency fueling commencing now.'
     ]
   ]
-  let message = `${sentence[0][Math.floor(Math.random()*sentence[0].length)]} ${sentence[1][Math.floor(Math.random()*sentence[1].length)]} The cost is 10,000 credits for a full tank of gas.`
+  let message = `${pick(sentence[0], false)} ${pick(sentence[1], false)} The cost is 10,000 credits for a full tank of gas.`
   displayComms(emergencyFuelPilot.image, emergencyFuelPilot.name, emergencyFuelPilot.dept, message, ()=>{
     clearComms()
-    const confirm = document.createElement('button')
-    confirm.classList.add('btn')
-    confirm.classList.add('btn-primary')
-    confirm.textContent = 'Confirm'
-    confirm.addEventListener('click', ()=>{
+    commsButton('Confirm', ()=>{
       let sentence = [
         "Fuel replenishment complete. You're good to go. Safe travels!",
         "Refueling successful. Your fuel tanks are fully replenished.",
@@ -183,7 +179,6 @@ function emergencyFuelRequest(){
       player.setCredits(player.credits - 10000)
       clearComms()
     })
-    shipComms.append(confirm)
   })
 }
 function generateShipName() {
@@ -280,7 +275,63 @@ function pick(list, procedural = true){
 }
 function emergencyServiceMenu(){
   clearComms()
-  commsButton('Request Tow Service', emergencyFuelRequest)
+  displayComms(
+    emergencyFuelPilot.image,
+    emergencyFuelPilot.name,
+    emergencyFuelPilot.dept,
+    `I have recieved your emergency signal. How can I help you?`,
+    ()=>{
+      commsButton('Request Tow Service', emergencyTowRequest)
+      commsButton('Request Fuel Service', emergencyFuelRequest)
+    }
+  )
+}
+function emergencyTowRequest(){
+  clearComms()
+  setMessage(`To tow you to the nearest station costs 10000 credits.`)
+  commsButton('Confirm', emergencyTow)
+}
+function emergencyTow(){
+  clearComms()
+  setMessage(`Sit tight and away we go.`)
+  warpView()
+  player.isInFlight = true
+  clearInterval(navigationInterval)
+  // Update player distance every millisecond
+  const lightspeed = 5370
+  const hackerspeed = 1
+  let closestDistance = Math.abs(spaceStations[0].starDistancePerMillionMiles - player.starDistance)
+  let closestStation = spaceStations[0]
+  for(let i = 1; i < spaceStations.length; i++){
+    let stationDistance = Math.abs(spaceStations[i].starDistancePerMillionMiles - player.starDistance)
+    if(stationDistance < closestDistance) {
+      closestDistance = stationDistance
+      closestStation = spaceStations[i]
+    }
+  }
+  navigationInterval = setInterval(() => {
+    // Increment player distance by 1 Mm per millisecond
+    if (player.starDistance < closestStation.starDistancePerMillionMiles) 
+      player.starDistance += 1;
+    else
+      player.starDistance -= 1
+    hudLocation.textContent = closestStation.name;
+    // Player has arrived at station
+    if (closestStation.starDistancePerMillionMiles - player.starDistance == 0) {
+      clearInterval(navigationInterval)
+      pilotWindow.style.backgroundImage = closestStation.image;
+      fuelTankBar.classList.remove('progress-bar-animated')
+      player.isInFlight = false
+      player.station = closestStation
+      stationMainMenu()
+      hideComms()
+    }
+    updateListContent()
+  }, 1)
+  player.setCredits(player.credits - 10000)
+}
+function warpView(){
+  pilotWindow.style.backgroundImage = 'url(../img/warp.gif)';
 }
 
 hudTitle.textContent = starSystem.name
@@ -343,10 +394,10 @@ spaceStations.forEach(station => {
         fuelLevelAlert()
       }
       
-    }, hackerspeed);
+    }, hackerspeed)
     // Highlight the clicked list item
-    li.classList.add('active');
-    pilotWindow.style.backgroundImage = 'url(../img/warp.gif)';
+    li.classList.add('active')
+    warpView()
     fuelTankBar.classList.add('progress-bar-animated')
     hideComms()
     player.isInFlight = true
@@ -361,4 +412,4 @@ setFuelLevel(fuelLevel)
 fuelLevelAlert()
 credits.textContent = player.credits
 player.shipName = generateShipName()
-emergencyServiceMenu()
+commsButton('Send Emergency Distress Signal', emergencyServiceMenu)
