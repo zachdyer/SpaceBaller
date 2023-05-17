@@ -9,24 +9,16 @@ let navigationInterval
 let fuelTankCapacity = 5000
 let fuelLevel = 0
 let fuelTankBar = document.querySelector('#fuel-tank')
-const refuel = document.querySelector('#refuel')
-const npc = document.querySelector('#npc')
 const log = document.querySelector('#log')
-const npcAvatar = document.querySelector('#npc-avatar')
-const npcChatAvatar = document.querySelector('#npc-chat-avatar')
-const npcMessage = document.querySelector('#npc-message')
-const npcName = document.querySelector('#npc-name')
-const npcDept = document.querySelector('#npc-dept')
 let emergencyFuelPilot = generateNPC('pilot', false, 'Emergency Fuel Services')
-const emergencyFuelBtn = document.createElement('button')
 const shipComms = document.querySelector('#ship-comms')
-const starportFuelBtn = document.createElement('button')
 const credits = document.querySelector('#credits')
 let player = {
   starDistance: 0,
   starID: 1,
-  image: `img/player-spaceship-2.png`,
+  image: `img/player-spaceship-3.png`,
   shipName: null,
+  shipModel: 'Planetary Cruiser',
   station: null,
   isInFlight: false,
   credits: 0,
@@ -38,7 +30,14 @@ let player = {
 let rng = new Math.seedrandom(player.starID)
 let maxStations = Math.floor(rng() * maxSpaceStationImages) + 1
 let starSystem = generateStarSystem()
-let jobBoardBtn = document.createElement('button')
+const npcElements = {
+  avatar: document.querySelector('#npc-avatar'),
+  thumb: document.querySelector('#npc-chat-avatar'),
+  profile: document.querySelector('#npc'),
+  message: document.querySelector('#npc-message'),
+  name: document.querySelector('#npc-name'),
+  dept: document.querySelector('#npc-dept')
+}
 
 function generateStation() {
   const spaceStationNames1 = ["Lunaris", "Stellar", "Nebula", "Galactic", "Astrocore", "Celestial", "Orion", "Cosmos", "Infinity", "Nova", "Serenity", "Quantum", "Interstellar", "Aurora", "Cosmic"]
@@ -49,7 +48,8 @@ function generateStation() {
     image: `url(../img/space-station-${Math.floor(rng() * maxSpaceStationImages) + 1}.png)`,
     starDistancePerMillionMiles: Math.floor(rng() * 5000),
     mechanicNPC: generateNPC('mechanic', true, `${stationName} Ship Services`),
-    jobNPC: generateNPC('office', true, `${stationName} Human Resources`)
+    jobNPC: generateNPC('office', true, `${stationName} Human Resources`),
+    generalNPC: generateNPC('office', true, `${stationName} Main Office`)
   }
 }
 function generateStarSystem() {
@@ -75,15 +75,26 @@ function setFuelLevel(amount){
   else
     fuelTankBar.style.width = `0%`
 }
-function displayComms(){
-  npc.style.display = 'block'
+function displayComms(avatar = 'img/loader.gif', name = 'Loading Contact...', dept = 'Loading Info...', message = '', callback = null){
+  npcElements.profile.style.display = 'block'
   log.style.display = 'block'
+  npcElements.avatar.style.backgroundImage = `url(img/loader.gif)`
+  npcElements.name.textContent = name
+  npcElements.dept.textContent = dept
+  npcElements.thumb.src = player.image
+  npcElements.message.textContent = `Attempting to connect to ${dept}.`
+  setTimeout(()=> {
+    npcElements.avatar.style.backgroundImage = `url('${avatar}')`
+    npcElements.thumb.src = avatar
+    npcElements.message.textContent = message
+    if(callback) callback()
+  }, 3000)
 }
 function hideComms() {
-  npc.style.display = 'none'
+  npcElements.profile.style.display = 'none'
   log.style.display = 'none'
 }
-function generateNPC(type, procedural, dept = ''){
+function generateNPC(type, procedural, dept = '', message = '', options = []){
   let name1
   let name2
   let imgMax
@@ -111,68 +122,69 @@ function generateNPC(type, procedural, dept = ''){
   return {
     name: npcName,
     image: `img/sci-fi-${type} (${imgPick}).png`,
-    dept: dept
+    dept: dept,
+    message: message,
+    options: options
   }
 }
 function emergencyFuelRequest(){
-  console.log(emergencyFuelBtn.textContent, emergencyFuelBtn.textContent == 'Emergency Fuel Services')
-  if(emergencyFuelBtn.textContent == 'Emergency Fuel Services') {
-    let sentence = [
-      [
-        `We received your emergency signal for fuel services.`,
-        `Your a long way from home.`,
-        "Emergency fuel request received.",
-        "Fuel reserves critically low.",
-        "Emergency fuel transfer initiated.",
-        "Emergency fueling underway.",
-        "Fuel levels critical.",
-        "Emergency refuel request confirmed. ",
-        "Fuel reserves depleted.",
-        "Emergency fueling initiated.",
-        "Low fuel detected.",
-        "Running on fumes."
-      ],
-      [
-        'Stand by. We are in route to your position.',
-        "Stand by for refueling.",
-        'Initiating emergency refueling protocol.',
-        'Please remain stationary.',
-        'Stay put while we replenish your fuel.',
-        'Emergency refueling in progress.',
-        'Estimated completion time: T-minus 5 minutes.',
-        'Activating emergency fueling sequence.',
-        'Please secure all systems.',
-        'Emergency refuel procedure initiated.',
-        'Emergency fueling commencing now.'
+  let sentence = [
+    [
+      `We received your emergency signal for fuel services.`,
+      `Your a long way from home.`,
+      "Emergency fuel request received.",
+      "Fuel reserves critically low.",
+      "Emergency fuel transfer initiated.",
+      "Emergency fueling underway.",
+      "Fuel levels critical.",
+      "Emergency refuel request confirmed. ",
+      "Fuel reserves depleted.",
+      "Emergency fueling initiated.",
+      "Low fuel detected.",
+      "Running on fumes."
+    ],
+    [
+      'Stand by. We are in route to your position.',
+      "Stand by for refueling.",
+      'Initiating emergency refueling protocol.',
+      'Please remain stationary.',
+      'Stay put while we replenish your fuel.',
+      'Emergency refueling in progress.',
+      'Estimated completion time: T-minus 5 minutes.',
+      'Activating emergency fueling sequence.',
+      'Please secure all systems.',
+      'Emergency refuel procedure initiated.',
+      'Emergency fueling commencing now.'
+    ]
+  ]
+  let message = `${sentence[0][Math.floor(Math.random()*sentence[0].length)]} ${sentence[1][Math.floor(Math.random()*sentence[1].length)]} The cost is 10,000 credits for a full tank of gas.`
+  displayComms(emergencyFuelPilot.image, emergencyFuelPilot.name, emergencyFuelPilot.dept, message, ()=>{
+    clearComms()
+    const confirm = document.createElement('button')
+    confirm.classList.add('btn')
+    confirm.classList.add('btn-primary')
+    confirm.textContent = 'Confirm'
+    confirm.addEventListener('click', ()=>{
+      let sentence = [
+        "Fuel replenishment complete. You're good to go. Safe travels!",
+        "Refueling successful. Your fuel tanks are fully replenished.",
+        "Refuel operation successful. All systems back online.",
+        "Fuel transfer complete. You now have a full tank. Fly safe!",
+        "Refueling process finished. Fuel levels restored to maximum capacity.",
+        "Refuel complete. Your ship is ready to soar through the stars.",
+        "Fuel replenished successfully. Launch permission granted. Fly responsibly.",
+        "Refuel operation successful. Prepare for takeoff.",
+        "Refueling complete. Your ship is fueled up and ready for action.",
+        "Fueling process completed. Ready for departure. Have a stellar journey!"
       ]
-    ]
-    npcAvatar.style.backgroundImage = `url('${emergencyFuelPilot.image}')`
-    npcChatAvatar.src = emergencyFuelPilot.image
-    npcMessage.textContent = `${sentence[0][Math.floor(Math.random()*sentence[0].length)]} ${sentence[1][Math.floor(Math.random()*sentence[1].length)]} The cost is 10,000 credits for a full tank of gas.`
-    npcName.textContent = emergencyFuelPilot.name
-    npcDept.textContent = emergencyFuelPilot.dept
-    displayComms()
-    emergencyFuelBtn.textContent = 'Confirm'
-  } else {
-    let sentence = [
-      "Fuel replenishment complete. You're good to go. Safe travels!",
-      "Refueling successful. Your fuel tanks are fully replenished.",
-      "Refuel operation successful. All systems back online.",
-      "Fuel transfer complete. You now have a full tank. Fly safe!",
-      "Refueling process finished. Fuel levels restored to maximum capacity.",
-      "Refuel complete. Your ship is ready to soar through the stars.",
-      "Fuel replenished successfully. Launch permission granted. Fly responsibly.",
-      "Refuel operation successful. Prepare for takeoff.",
-      "Refueling complete. Your ship is fueled up and ready for action.",
-      "Fueling process completed. Ready for departure. Have a stellar journey!"
-    ]
-    setFuelLevel(fuelTankCapacity)
-    npcMessage.textContent = `${sentence[Math.floor(Math.random()*sentence.length)]}`
-    emergencyFuelBtn.style.display = 'none'
-    emergencyFuelBtn.textContent = 'Emergency Fuel Services'
-    player.credits - 10000
-    player.setCredits(player.credits - 10000)
-  }
+      setFuelLevel(fuelTankCapacity)
+      npcElements.message.textContent = `${sentence[Math.floor(Math.random()*sentence.length)]}`
+      player.credits - 10000
+      player.setCredits(player.credits - 10000)
+      clearComms()
+    })
+    shipComms.append(confirm)
+  })
 }
 function generateShipName() {
     let words = [
@@ -181,49 +193,95 @@ function generateShipName() {
     ]
     return `${words[0][Math.floor(rng()*words[0].length)]} ${words[1][Math.floor(rng()*words[1].length)]}`
 }
-function starportFuelRequest(){
-  if(starportFuelBtn.textContent == player.station.mechanicNPC.dept) {
-    npcAvatar.style.backgroundImage = `url('${player.station.mechanicNPC.image}')`
-    npcChatAvatar.src = player.station.mechanicNPC.image
-    npcMessage.textContent = `Welcome to ${player.station.mechanicNPC.dept}. Stand by as we refuel.`
-    npcName.textContent = player.station.mechanicNPC.name
-    npcDept.textContent = player.station.mechanicNPC.dept
-    displayComms()
-    starportFuelBtn.textContent = 'Confirm'
-  } else {
-    setFuelLevel(fuelTankCapacity)
-    npcMessage.textContent = `We have replenished your gas tank. You are good to go. Happy hunting.`
-    starportFuelBtn.style.display = 'none'
-    starportFuelBtn.textContent = player.station.mechanicNPC.dept
-  }
+function starportFuelRequest(button){
+  button.disabled = true
+  setFuelLevel(fuelTankCapacity)
+  let sentence = [
+    "Fuel replenishment complete. You're good to go. Safe travels!",
+    "Refueling successful. Your fuel tanks are fully replenished.",
+    "Refuel operation successful. All systems back online.",
+    "Fuel transfer complete. You now have a full tank. Fly safe!",
+    "Refueling process finished. Fuel levels restored to maximum capacity.",
+    "Refuel complete. Your ship is ready to soar through the stars.",
+    "Fuel replenished successfully. Launch permission granted. Fly responsibly.",
+    "Refuel operation successful. Prepare for takeoff.",
+    "Refueling complete. Your ship is fueled up and ready for action.",
+    "Fueling process completed. Ready for departure. Have a stellar journey!"
+  ]
+  setMessage(pick(sentence, false))
+  clearComms()
+  commsButton('Exit', stationMainMenu)
 }
 function fuelLevelAlert(){
-  npcAvatar.style.backgroundImage = `url('${player.image}')`
-  npcChatAvatar.src = player.image
-  npcMessage.textContent = `Danger. Fuel levels are critical. Send a request for Emergency Fuel Services.`
-  npcName.textContent = player.shipName
-  npcDept.textContent = 'Planetary Cruiser'
-  displayComms()
+  let message = `Danger. Fuel levels are critical. Send a request for Emergency Fuel Services.`
+  displayComms(player.image, player.shipName, player.shipModel, message)
 }
-
-emergencyFuelBtn.addEventListener('click', emergencyFuelRequest)
-starportFuelBtn.addEventListener('click', starportFuelRequest)
-jobBoardBtn.addEventListener('click', ()=>{
-  if(jobBoardBtn.textContent == player.station.jobNPC.dept) {
-    npcAvatar.style.backgroundImage = `url('${player.station.jobNPC.image}')`
-    npcChatAvatar.src = player.station.jobNPC.image
-    npcMessage.textContent = `Welcome to ${player.station.jobNPC.dept}. Would you like a job?`
-    npcName.textContent = player.station.jobNPC.name
-    npcDept.textContent = player.station.jobNPC.dept
-    displayComms()
-    jobBoardBtn.textContent = 'Confirm'
-    starportFuelBtn.style.display = 'none'
-  } else {
-    npcMessage.textContent = `We will have a job available soon. Check back later.`
-    jobBoardBtn.textContent = player.station.jobNPC.dept
-    starportFuelBtn.style.display = 'block'
+function clearComms() {
+  while (shipComms.firstChild) {
+    shipComms.removeChild(shipComms.firstChild);
   }
-})
+}
+function commsButton(label, func){
+  const button = document.createElement('button')
+  button.classList.add('btn')
+  button.classList.add('btn-primary')
+  button.textContent = label
+  button.addEventListener('click', func)
+  shipComms.appendChild(button)
+  return button
+}
+function stationMainMenu(){
+  clearComms()
+  commsButton(player.station.mechanicNPC.dept, stationShipMenu)
+  commsButton(player.station.jobNPC.dept, stationJobMenu)
+}
+function stationShipMenu(){
+  clearComms()
+  let message = `Welcome to ${player.station.mechanicNPC.dept}. What can I do for you?`
+  displayComms(
+    player.station.mechanicNPC.image, 
+    player.station.mechanicNPC.name,
+    player.station.mechanicNPC.dept,
+    message,
+    ()=>{
+      const refuel = commsButton('Refuel', starportFuelRequest)
+      if(fuelLevel == fuelTankCapacity) refuel.disabled = true
+      commsButton('Exit', stationMainMenu)
+    })
+}
+function stationJobMenu(){
+  clearComms()
+  displayComms(
+    player.station.jobNPC.image,
+    player.station.jobNPC.name,
+    player.station.jobNPC.dept,
+    `Welcome to ${player.station.jobNPC.dept}. We have a job available that pays 1000 credits.`,
+    ()=>{commsButton('Accept Job', acceptJob)}
+  )
+}
+function acceptJob(){
+  clearComms()
+  commsButton('Complete Job', completeJob)
+  setMessage(`Great job! It must of been quite a task but you pulled it off. Press the complete job button and we will transfer the funds to your CryptCredits.`)
+}
+function completeJob(){
+  stationMainMenu()
+  player.setCredits(player.credits + 1000)
+  setMessage(`We transferred the credits to your account. Check back again anytime your looking for more work.`)
+}
+function setMessage(message) {
+  npcElements.message.textContent = message
+}
+function pick(list, procedural = true){
+  if(procedural) 
+    return list[Math.floor(rng()*list.length)]
+  else 
+    return list[Math.floor(Math.random()*list.length)]
+}
+function emergencyServiceMenu(){
+  clearComms()
+  commsButton('Request Tow Service', emergencyFuelRequest)
+}
 
 hudTitle.textContent = starSystem.name
 pilotWindow.style.backgroundImage = starSystem.image
@@ -272,10 +330,7 @@ spaceStations.forEach(station => {
           fuelTankBar.classList.remove('progress-bar-animated')
           player.isInFlight = false
           player.station = station
-          starportFuelBtn.textContent = player.station.mechanicNPC.dept
-          starportFuelBtn.style.display = 'block'
-          jobBoardBtn.style.display = 'block'
-          jobBoardBtn.textContent = player.station.jobNPC.dept
+          stationMainMenu()
         }
         updateListContent()
         setFuelLevel(fuelLevel - 1)
@@ -285,8 +340,6 @@ spaceStations.forEach(station => {
         fuelTankBar.classList.remove('progress-bar-animated')
         pilotWindow.style.backgroundImage = starSystem.image
         player.isInFlight = false
-        emergencyFuelBtn.textContent = 'Emergency Fuel Services'
-        emergencyFuelBtn.style.display = 'block'
         fuelLevelAlert()
       }
       
@@ -297,7 +350,6 @@ spaceStations.forEach(station => {
     fuelTankBar.classList.add('progress-bar-animated')
     hideComms()
     player.isInFlight = true
-    starportFuelBtn.style.display = 'none'
   });
 
   li.appendChild(stationInfo);
@@ -306,22 +358,7 @@ spaceStations.forEach(station => {
 });
 // The fuel level is initialized to update the fuel bar
 setFuelLevel(fuelLevel)
-emergencyFuelBtn.classList.add('btn')
-emergencyFuelBtn.classList.add('btn-primary')
-emergencyFuelBtn.classList.add('mb-2')
-emergencyFuelBtn.textContent = `Emergency Fuel Services`
-shipComms.appendChild(emergencyFuelBtn)
-starportFuelBtn.classList.add('btn')
-starportFuelBtn.classList.add('btn-primary')
-starportFuelBtn.classList.add('mb-2')
-starportFuelBtn.textContent = `Starport Fuel Services`
-starportFuelBtn.style.display = 'none'
-shipComms.appendChild(starportFuelBtn)
 fuelLevelAlert()
 credits.textContent = player.credits
 player.shipName = generateShipName()
-jobBoardBtn.classList.add('btn')
-jobBoardBtn.classList.add('btn-primary')
-jobBoardBtn.textContent = `Starport Mission Board`
-jobBoardBtn.style.display = 'none'
-shipComms.appendChild(jobBoardBtn)
+emergencyServiceMenu()
