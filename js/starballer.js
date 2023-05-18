@@ -49,7 +49,8 @@ function generateStation() {
     starDistancePerMillionMiles: Math.floor(rng() * 5000),
     mechanicNPC: generateNPC('mechanic', true, `${stationName} Ship Services`),
     jobNPC: generateNPC('office', true, `${stationName} Human Resources`),
-    generalNPC: generateNPC('office', true, `${stationName} Main Office`)
+    generalNPC: generateNPC('office', true, `${stationName} Main Office`),
+    jobs: generateJobs()
   }
 }
 function generateStarSystem() {
@@ -158,7 +159,11 @@ function emergencyFuelRequest(){
     ]
   ]
   let message = `${pick(sentence[0], false)} ${pick(sentence[1], false)} The cost is 10,000 credits for a full tank of gas.`
-  displayComms(emergencyFuelPilot.image, emergencyFuelPilot.name, emergencyFuelPilot.dept, message, ()=>{
+  displayComms(
+    emergencyFuelPilot.image, 
+    emergencyFuelPilot.name, 
+    emergencyFuelPilot.dept, 
+    message, ()=>{
     clearComms()
     commsButton('Confirm', ()=>{
       let sentence = [
@@ -180,6 +185,7 @@ function emergencyFuelRequest(){
       clearComms()
       powerNavigation(true)
     })
+    commsButton('Exit', emergencyServiceMenu)
   })
 }
 function generateShipName() {
@@ -190,23 +196,12 @@ function generateShipName() {
     return `${words[0][Math.floor(rng()*words[0].length)]} ${words[1][Math.floor(rng()*words[1].length)]}`
 }
 function starportFuelRequest(){
-  setFuelLevel(fuelTankCapacity)
-  let sentence = [
-    "Fuel replenishment complete. You're good to go. Safe travels!",
-    "Refueling successful. Your fuel tanks are fully replenished.",
-    "Refuel operation successful. All systems back online.",
-    "Fuel transfer complete. You now have a full tank. Fly safe!",
-    "Refueling process finished. Fuel levels restored to maximum capacity.",
-    "Refuel complete. Your ship is ready to soar through the stars.",
-    "Fuel replenished successfully. Launch permission granted. Fly responsibly.",
-    "Refuel operation successful. Prepare for takeoff.",
-    "Refueling complete. Your ship is fueled up and ready for action.",
-    "Fueling process completed. Ready for departure. Have a stellar journey!"
-  ]
-  setMessage(pick(sentence, false))
+  let estimate = fuelTankCapacity - fuelLevel
+  setMessage(`The cost of NovaFuel per gallon is 1 credit. It's literally the cheapest thing you can buy in the galaxy. The government made sure of that. To get you to a full tank your looking at ${estimate} credits.`)
   clearComms()
+  commsButton('Confirm', starportRefuel)
   commsButton('Exit', stationMainMenu)
-  powerNavigation(true)
+  
 }
 function fuelLevelAlert(){
   let message = `Danger. Fuel levels are critical. Shutting navigation system down. Recommend Sending a request signal for Emergency Fuel Services.`
@@ -231,6 +226,7 @@ function commsButton(label, func){
 }
 function stationMainMenu(){
   clearComms()
+  hideComms()
   commsButton(player.station.mechanicNPC.dept, stationShipMenu)
   commsButton(player.station.jobNPC.dept, stationJobMenu)
 }
@@ -254,19 +250,26 @@ function stationJobMenu(){
     player.station.jobNPC.image,
     player.station.jobNPC.name,
     player.station.jobNPC.dept,
-    `Welcome to ${player.station.jobNPC.dept}. We have a job available that pays 1000 credits.`,
-    ()=>{commsButton('Accept Job', acceptJob)}
+    `Welcome to ${player.station.jobNPC.dept}.`,
+    ()=>{
+      player.station.jobs.forEach(job =>{
+        commsButton(job.type, job.details)
+      })
+      commsButton('Exit', stationMainMenu)
+    }
   )
 }
 function acceptJob(){
+  setMessage(`Great job! It must of been quite a task but you pulled it off. Press the complete job button and we will transfer the funds to your CryptCredits.`)
   clearComms()
   commsButton('Complete Job', completeJob)
-  setMessage(`Great job! It must of been quite a task but you pulled it off. Press the complete job button and we will transfer the funds to your CryptCredits.`)
+  commsButton('Exit', stationMainMenu)
 }
 function completeJob(){
-  stationMainMenu()
   player.setCredits(player.credits + 1000)
   setMessage(`We transferred the credits to your account. Check back again anytime your looking for more work.`)
+  clearComms()
+  commsButton('Exit', stationMainMenu)
 }
 function setMessage(message) {
   npcElements.message.textContent = message
@@ -287,6 +290,7 @@ function emergencyServiceMenu(){
     ()=>{
       commsButton('Request Tow Service', emergencyTowRequest)
       commsButton('Request Fuel Service', emergencyFuelRequest)
+      commsButton('Exit', fuelLevelAlert)
     }
   )
 }
@@ -294,44 +298,19 @@ function emergencyTowRequest(){
   clearComms()
   setMessage(`To tow you to the nearest station costs 10000 credits.`)
   commsButton('Confirm', emergencyTow)
+  commsButton('Exit', fuelLevelAlert)
 }
 function emergencyTow(){
   clearComms()
   setMessage(`Sit tight and away we go.`)
-  warpView()
-  player.isInFlight = true
-  clearInterval(navigationInterval)
-  // Update player distance every millisecond
-  const lightspeed = 5370
-  const hackerspeed = 1
-  let closestDistance = Math.abs(spaceStations[0].starDistancePerMillionMiles - player.starDistance)
   let closestStation = spaceStations[0]
   for(let i = 1; i < spaceStations.length; i++){
     let stationDistance = Math.abs(spaceStations[i].starDistancePerMillionMiles - player.starDistance)
-    if(stationDistance < closestDistance) {
-      closestDistance = stationDistance
+    if(stationDistance < Math.abs(closestStation.starDistancePerMillionMiles - player.starDistance)) {
       closestStation = spaceStations[i]
     }
   }
-  navigationInterval = setInterval(() => {
-    // Increment player distance by 1 Mm per millisecond
-    if (player.starDistance < closestStation.starDistancePerMillionMiles) 
-      player.starDistance += 1;
-    else
-      player.starDistance -= 1
-    hudLocation.textContent = closestStation.name;
-    // Player has arrived at station
-    if (closestStation.starDistancePerMillionMiles - player.starDistance == 0) {
-      clearInterval(navigationInterval)
-      pilotWindow.style.backgroundImage = closestStation.image;
-      fuelTankBar.classList.remove('progress-bar-animated')
-      player.isInFlight = false
-      player.station = closestStation
-      stationMainMenu()
-      hideComms()
-    }
-    updateListContent()
-  }, 1)
+  movePlayer(closestStation, false)
   player.setCredits(player.credits - 10000)
 }
 function warpView(){
@@ -343,6 +322,113 @@ function powerNavigation(onoff){
     button.disabled = !onoff
   })
 }
+function generateJobs(){
+  let jobs = []
+  const types = [
+    'Data Delivery',
+    'Cargo Delivery',
+    'Passenger Transport',
+    'Rescue Operation',
+    'Research Assignment',
+    'Diplomatic Mission',
+    'Asteroid Mining',
+    'Security Escort'
+  ]
+  let type = pick(types)
+  jobs.push({
+    type: type,
+    details: ()=>{
+      setMessage(type)
+    }
+  })
+  return jobs
+}
+function starportRefuel(){
+  const cost = fuelTankCapacity - fuelLevel
+  setFuelLevel(fuelTankCapacity)
+  let sentence = [
+    "Fuel replenishment complete. You're good to go. Safe travels!",
+    "Refueling successful. Your fuel tanks are fully replenished.",
+    "Refuel operation successful. All systems back online.",
+    "Fuel transfer complete. You now have a full tank. Fly safe!",
+    "Refueling process finished. Fuel levels restored to maximum capacity.",
+    "Refuel complete. Your ship is ready to soar through the stars.",
+    "Fuel replenished successfully. Launch permission granted. Fly responsibly.",
+    "Refuel operation successful. Prepare for takeoff.",
+    "Refueling complete. Your ship is fueled up and ready for action.",
+    "Fueling process completed. Ready for departure. Have a stellar journey!"
+  ]
+  setMessage(pick(sentence, false))
+  powerNavigation(true)
+  player.setCredits(player.credits - cost)
+  clearComms()
+  commsButton('Exit', stationMainMenu)
+}
+function navigationMenu(){
+  // Clear navigation list
+  while (navigation.firstChild) {
+    navigation.removeChild(navigation.firstChild);
+  }
+  // Build and rebuild navigation list
+  spaceStations.sort((a, b) => a.starDistancePerMillionMiles - b.starDistancePerMillionMiles);
+  spaceStations.forEach(station => {
+    if(station != player.station) {
+      const li = document.createElement('li');
+      const stationInfo = document.createElement('span')
+      li.setAttribute('class', 'list-group-item d-flex justify-content-between align-items-center');
+      li.setAttribute('data-station-name', station.name);
+      li.setAttribute('data-station-distance', station.starDistancePerMillionMiles);
+      stationInfo.textContent = `${station.name} ${station.starDistancePerMillionMiles - player.starDistance} Mm`;
+      const button = document.createElement('button');
+      button.setAttribute('class', 'btn btn-primary float-end btn-navigate');
+      button.textContent = 'Navigate';
+      if(fuelLevel <= 0) button.disabled = true
+      button.addEventListener('click', () => {
+        // Remove highlighting from all list items
+        const listItems = document.querySelectorAll('.list-group-item');
+        listItems.forEach(item => {
+          item.classList.remove('active');
+        });
+        movePlayer(station)
+        // Highlight the clicked list item
+        li.classList.add('active')
+        hideComms()
+        player.isInFlight = true
+      })
+      li.appendChild(stationInfo);
+      li.appendChild(button);
+      navigation.appendChild(li);
+    }
+  })
+}
+function movePlayer(station, fuel = true) {
+  warpView()
+  player.isInFlight = true
+  clearInterval(navigationInterval)
+  // Update player distance every millisecond
+  const lightspeed = 5370
+  const hackerspeed = 1
+  const velocity = (player.starDistance < station.starDistancePerMillionMiles) ? hackerspeed : -hackerspeed
+  if(fuel) fuelTankBar.classList.add('progress-bar-animated')
+  navigationInterval = setInterval(() => {
+    // Increment player distance by 1 Mm per millisecond
+    player.starDistance += velocity;
+    hudLocation.textContent = station.name;
+    // Player has arrived at station
+    if (station.starDistancePerMillionMiles - player.starDistance == 0) {
+      clearInterval(navigationInterval)
+      pilotWindow.style.backgroundImage = station.image;
+      player.isInFlight = false
+      player.station = station
+      stationMainMenu()
+      hideComms()
+      fuelTankBar.classList.remove('progress-bar-animated')
+      navigationMenu()
+    }
+    updateListContent()
+    if(fuel) setFuelLevel(fuelLevel - 1)
+  }, 1)
+}
 
 hudTitle.textContent = starSystem.name
 pilotWindow.style.backgroundImage = starSystem.image
@@ -350,73 +436,7 @@ for (let i = 0; i < maxStations; i++) {
   spaceStations.push(generateStation())
 }
 // order stations
-spaceStations.sort((a, b) => a.starDistancePerMillionMiles - b.starDistancePerMillionMiles);
-spaceStations.forEach(station => {
-  const li = document.createElement('li');
-  const stationInfo = document.createElement('span')
-  li.setAttribute('class', 'list-group-item d-flex justify-content-between align-items-center');
-  li.setAttribute('data-station-name', station.name);
-  li.setAttribute('data-station-distance', station.starDistancePerMillionMiles);
-  stationInfo.textContent = `${station.name} ${station.starDistancePerMillionMiles - player.starDistance} Mm`;
-  const button = document.createElement('button');
-  button.setAttribute('class', 'btn btn-primary float-end btn-navigate');
-  button.textContent = 'Navigate';
-  button.addEventListener('click', () => {
-    // Remove highlighting from all list items
-    const listItems = document.querySelectorAll('.list-group-item');
-    listItems.forEach(item => {
-      item.classList.remove('active');
-    });
-    const navButtons = document.querySelectorAll('.btn-navigate')
-    navButtons.forEach(btn => {
-      btn.disabled = false
-    })
-    clearInterval(navigationInterval)
-    // Update player distance every millisecond
-    const lightspeed = 5370
-    const hackerspeed = 1
-    navigationInterval = setInterval(() => {
-      // Increment player distance by 1 Mm per millisecond
-      if(fuelLevel > 0) {
-        if (player.starDistance < station.starDistancePerMillionMiles) 
-          player.starDistance += 1;
-        else
-          player.starDistance -= 1
-        hudLocation.textContent = station.name;
-        // Player has arrived at station
-        if (station.starDistancePerMillionMiles - player.starDistance == 0) {
-          clearInterval(navigationInterval)
-          pilotWindow.style.backgroundImage = station.image;
-          button.disabled = true;
-          fuelTankBar.classList.remove('progress-bar-animated')
-          player.isInFlight = false
-          player.station = station
-          stationMainMenu()
-        }
-        updateListContent()
-        setFuelLevel(fuelLevel - 1)
-      } else {
-        // When player runs out of fuel during travel
-        clearInterval(navigationInterval)
-        fuelTankBar.classList.remove('progress-bar-animated')
-        pilotWindow.style.backgroundImage = starSystem.image
-        player.isInFlight = false
-        fuelLevelAlert()
-      }
-      
-    }, hackerspeed)
-    // Highlight the clicked list item
-    li.classList.add('active')
-    warpView()
-    fuelTankBar.classList.add('progress-bar-animated')
-    hideComms()
-    player.isInFlight = true
-  });
-
-  li.appendChild(stationInfo);
-  li.appendChild(button);
-  navigation.appendChild(li);
-});
+navigationMenu()
 // The fuel level is initialized to update the fuel bar
 setFuelLevel(fuelLevel)
 fuelLevelAlert()

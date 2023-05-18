@@ -20,8 +20,8 @@ body {
   box-shadow: inset 0px 0px 10px rgba(0, 0, 0, 0.8);
   background-color: black;
   position: relative;
-  overflow: hidden;
-  min-height: 45vh;
+  overflow-y: scroll;
+  height: 45vh;
 }
 
 #pilot-window::before {
@@ -83,4 +83,22 @@ body {
     background-position: 0 0;
   }
 }
+/* Target the entire scroll bar */
+::-webkit-scrollbar {
+  width: 10px;
+}
 
+/* Target the scroll bar thumb */
+::-webkit-scrollbar-thumb {
+  background-color: lime;
+}
+
+/* Target the scroll bar track */
+::-webkit-scrollbar-track {
+  background-color: #333;
+}
+
+/* Target the scroll bar thumb on hover */
+::-webkit-scrollbar-thumb:hover {
+  background-color: lightgreen;
+}
