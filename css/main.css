@@ -60,6 +60,15 @@ body {
 #npc-avatar {
   background-size: cover;
 }
+#active-jobs-header {
+  display: none;
+}
+.sci-fi-font {
+  font-family: 'Orbitron', sans-serif;
+}
+.bg-lime {
+  background-color: lime;
+}
 
 @keyframes sway {
   0% {

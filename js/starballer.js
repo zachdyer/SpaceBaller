@@ -17,7 +17,7 @@ let player = {
   starDistance: 0,
   starID: 1,
   image: `img/player-spaceship-3.png`,
-  shipName: null,
+  shipName: 'StarBaller',
   shipModel: 'Planetary Cruiser',
   station: null,
   isInFlight: false,
@@ -25,7 +25,8 @@ let player = {
   setCredits: (amount)=>{
     player.credits = amount
     credits.textContent = player.credits
-  }
+  },
+  jobs: []
 }
 let rng = new Math.seedrandom(player.starID)
 let maxStations = Math.floor(rng() * maxSpaceStationImages) + 1
@@ -46,11 +47,11 @@ function generateStation() {
   return {
     name: stationName,
     image: `url(../img/space-station-${Math.floor(rng() * maxSpaceStationImages) + 1}.png)`,
-    starDistancePerMillionMiles: Math.floor(rng() * 5000),
+    starDistance: Math.floor(rng() * 5000),
     mechanicNPC: generateNPC('mechanic', true, `${stationName} Ship Services`),
     jobNPC: generateNPC('office', true, `${stationName} Human Resources`),
     generalNPC: generateNPC('office', true, `${stationName} Main Office`),
-    jobs: generateJobs()
+    jobs: []
   }
 }
 function generateStarSystem() {
@@ -76,7 +77,7 @@ function setFuelLevel(amount){
   else
     fuelTankBar.style.width = `0%`
 }
-function displayComms(avatar = 'img/loader.gif', name = 'Loading Contact...', dept = 'Loading Info...', message = '', callback = null){
+function displayComms(avatar = 'img/loader.gif', name = 'Loading Contact...', dept = 'Loading Info...', message = '', callback = null, delay = 1){
   npcElements.profile.style.display = 'block'
   log.style.display = 'block'
   npcElements.avatar.style.backgroundImage = `url(img/loader.gif)`
@@ -89,7 +90,7 @@ function displayComms(avatar = 'img/loader.gif', name = 'Loading Contact...', de
     npcElements.thumb.src = avatar
     npcElements.message.textContent = message
     if(callback) callback()
-  }, 3000)
+  }, delay)
 }
 function hideComms() {
   npcElements.profile.style.display = 'none'
@@ -246,24 +247,33 @@ function stationShipMenu(){
 }
 function stationJobMenu(){
   clearComms()
+  let message = `Welcome to ${player.station.jobNPC.dept}.`
+  player.station.jobs.forEach(job => {
+    if(job.status == 'active') {
+      message = `How's that ${job.type} going? If you have an questions check your active missions file.`
+    }
+  })
   displayComms(
     player.station.jobNPC.image,
     player.station.jobNPC.name,
     player.station.jobNPC.dept,
-    `Welcome to ${player.station.jobNPC.dept}.`,
+    message,
     ()=>{
-      player.station.jobs.forEach(job =>{
-        commsButton(job.type, job.details)
+      player.station.jobs.forEach(job => {
+        if(job.status == 'available')
+          commsButton(job.type, job.details)
       })
       commsButton('Exit', stationMainMenu)
     }
   )
 }
-function acceptJob(){
-  setMessage(`Great job! It must of been quite a task but you pulled it off. Press the complete job button and we will transfer the funds to your CryptCredits.`)
+function acceptJob(job){
+  setMessage(`Come back when you finish the ${job.type} and collect your CrypoCredits.`)
   clearComms()
-  commsButton('Complete Job', completeJob)
   commsButton('Exit', stationMainMenu)
+  addJob(job)
+  document.querySelector('#active-jobs-header').style.display = 'block'
+  player.jobs.push(job)
 }
 function completeJob(){
   player.setCredits(player.credits + 1000)
@@ -305,8 +315,8 @@ function emergencyTow(){
   setMessage(`Sit tight and away we go.`)
   let closestStation = spaceStations[0]
   for(let i = 1; i < spaceStations.length; i++){
-    let stationDistance = Math.abs(spaceStations[i].starDistancePerMillionMiles - player.starDistance)
-    if(stationDistance < Math.abs(closestStation.starDistancePerMillionMiles - player.starDistance)) {
+    let stationDistance = Math.abs(spaceStations[i].starDistance - player.starDistance)
+    if(stationDistance < Math.abs(closestStation.starDistance - player.starDistance)) {
       closestStation = spaceStations[i]
     }
   }
@@ -322,8 +332,7 @@ function powerNavigation(onoff){
     button.disabled = !onoff
   })
 }
-function generateJobs(){
-  let jobs = []
+function generateJob(jobStation){
   const types = [
     'Data Delivery',
     'Cargo Delivery',
@@ -334,14 +343,36 @@ function generateJobs(){
     'Asteroid Mining',
     'Security Escort'
   ]
-  let type = pick(types)
-  jobs.push({
+  const type = types[0]//pick(types)
+  let message = `Job info`
+  let pay = 0
+  let missionStation
+  if(type == 'Data Delivery') {
+    let availableStations = spaceStations.filter((station) => station != jobStation)
+    missionStation = pick(availableStations, false)
+    let totalDistance = Math.abs(missionStation.starDistance - jobStation.starDistance)
+    let payPerMillionMiles = 3
+    pay = totalDistance * payPerMillionMiles
+    message = `We need you to deliver this encrypted data to ${missionStation.name}. We will pay you ${payPerMillionMiles} credits per million miles traveled. We agree to pay ${pay} credits.`
+  }
+  let job = {
     type: type,
     details: ()=>{
-      setMessage(type)
-    }
-  })
-  return jobs
+      setMessage(message)
+      clearComms()
+      commsButton('Accept', ()=> {
+        job.status = 'active'
+        acceptJob(job)
+      })
+      commsButton('Exit', stationMainMenu)
+    },
+    pay: pay,
+    status: 'available',
+    info: message,
+    destination: missionStation,
+    jobStation: jobStation
+  }
+  return job
 }
 function starportRefuel(){
   const cost = fuelTankCapacity - fuelLevel
@@ -360,7 +391,7 @@ function starportRefuel(){
   ]
   setMessage(pick(sentence, false))
   powerNavigation(true)
-  player.setCredits(player.credits - cost)
+  updateCredits(-cost)
   clearComms()
   commsButton('Exit', stationMainMenu)
 }
@@ -370,15 +401,16 @@ function navigationMenu(){
     navigation.removeChild(navigation.firstChild);
   }
   // Build and rebuild navigation list
-  spaceStations.sort((a, b) => a.starDistancePerMillionMiles - b.starDistancePerMillionMiles);
+  spaceStations.sort((a, b) => a.starDistance - b.starDistance);
   spaceStations.forEach(station => {
     if(station != player.station) {
       const li = document.createElement('li');
       const stationInfo = document.createElement('span')
       li.setAttribute('class', 'list-group-item d-flex justify-content-between align-items-center');
       li.setAttribute('data-station-name', station.name);
-      li.setAttribute('data-station-distance', station.starDistancePerMillionMiles);
-      stationInfo.textContent = `${station.name} ${station.starDistancePerMillionMiles - player.starDistance} Mm`;
+      li.setAttribute('data-station-distance', station.starDistance);
+      const distance = Math.abs(station.starDistance - player.starDistance)
+      stationInfo.textContent = `${station.name} ${distance} Mm`;
       const button = document.createElement('button');
       button.setAttribute('class', 'btn btn-primary float-end btn-navigate');
       button.textContent = 'Navigate';
@@ -394,6 +426,7 @@ function navigationMenu(){
         li.classList.add('active')
         hideComms()
         player.isInFlight = true
+        clearComms()
       })
       li.appendChild(stationInfo);
       li.appendChild(button);
@@ -408,14 +441,14 @@ function movePlayer(station, fuel = true) {
   // Update player distance every millisecond
   const lightspeed = 5370
   const hackerspeed = 1
-  const velocity = (player.starDistance < station.starDistancePerMillionMiles) ? hackerspeed : -hackerspeed
+  const velocity = (player.starDistance < station.starDistance) ? hackerspeed : -hackerspeed
   if(fuel) fuelTankBar.classList.add('progress-bar-animated')
   navigationInterval = setInterval(() => {
     // Increment player distance by 1 Mm per millisecond
     player.starDistance += velocity;
     hudLocation.textContent = station.name;
     // Player has arrived at station
-    if (station.starDistancePerMillionMiles - player.starDistance == 0) {
+    if (station.starDistance - player.starDistance == 0) {
       clearInterval(navigationInterval)
       pilotWindow.style.backgroundImage = station.image;
       player.isInFlight = false
@@ -424,21 +457,107 @@ function movePlayer(station, fuel = true) {
       hideComms()
       fuelTankBar.classList.remove('progress-bar-animated')
       navigationMenu()
+      activeContracts()
     }
     updateListContent()
     if(fuel) setFuelLevel(fuelLevel - 1)
   }, 1)
 }
-
-hudTitle.textContent = starSystem.name
-pilotWindow.style.backgroundImage = starSystem.image
-for (let i = 0; i < maxStations; i++) {
-  spaceStations.push(generateStation())
+function addJob(job){
+  const button = document.createElement('button')
+  button.classList.add('btn')
+  button.classList.add('btn-primary')
+  if(player.station == job.destination) {
+    button.textContent = `Complete ${job.type}`
+    button.addEventListener('click', ()=>{
+      console.log(job)
+      displayComms(
+        job.destination.jobNPC.image,
+        job.destination.jobNPC.name,
+        job.destination.jobNPC.dept,
+        `You brought the data! I can finally login now. Thanks for delivering it here all the way from ${job.jobStation.jobNPC.dept}.`,
+        ()=>{
+          player.jobs = remove(player.jobs, job)
+          player.setCredits(player.credits + job.pay)
+          showModal('CryptoCredits Earned', `Your account was credited ${job.pay} credits.`)
+          activeContracts()
+          job.jobStation.jobs.forEach(job => {
+            if (job === job) {
+              job.status = 'available';
+            }
+          });
+        }
+      )
+    })
+  } else {
+    button.textContent = `${job.destination.name} ${job.type}`
+    button.addEventListener('click', ()=>{
+      displayComms(
+        player.image,
+        player.shipName,
+        player.shipModel,
+        job.info
+      )
+    })
+  }
+  document.querySelector('#active-jobs').appendChild(button)
+  return button
 }
-// order stations
-navigationMenu()
-// The fuel level is initialized to update the fuel bar
-setFuelLevel(fuelLevel)
-fuelLevelAlert()
-credits.textContent = player.credits
-player.shipName = generateShipName()
+function startGame(fuel = 0, credits = 0, station = false){
+  hudTitle.textContent = starSystem.name
+  pilotWindow.style.backgroundImage = starSystem.image
+  for (let i = 0; i < maxStations; i++) {
+    spaceStations.push(generateStation())
+  }
+  spaceStations.forEach(station =>{
+    station.jobs.push(generateJob(station))
+  })
+  setFuelLevel(fuel)
+  if(fuel == 0) fuelLevelAlert()
+  player.setCredits(credits)
+  player.shipName = generateShipName()
+  if(station) {
+    player.station = spaceStations[0]
+    player.starDistance = player.station.starDistance
+    stationMainMenu()
+    pilotWindow.style.backgroundImage = player.station.image;
+  }
+  navigationMenu()
+  document.querySelector('#dialogue-close').addEventListener('click', () => {
+    document.querySelector('#dialogue-box').close();
+  })
+}
+function activeContracts(){
+  const activeJobs = document.querySelector('#active-jobs')
+  while (activeJobs.firstChild) {
+    activeJobs.removeChild(activeJobs.firstChild);
+  }
+  if(player.jobs.length) {
+    document.querySelector('#active-jobs-header').style.display = 'block'
+    player.jobs.forEach(job => {
+      addJob(job)
+    })
+  } else {
+    document.querySelector('#active-jobs-header').style.display = 'none'
+  }
+}
+function remove(array, element) {
+  return array.filter(item => item !== element);
+}
+function showModal(title, message){
+  const dialogueBox = document.querySelector('#dialogue-box')
+  dialogueBox.showModal()
+  document.querySelector('#dialogue-title').textContent = title
+  document.querySelector('#dialogue-message').textContent = message
+}
+function updateCredits(amount){
+  player.setCredits(player.credits + amount)
+  if(amount > 0) {
+    showModal('CryptoCredits', `Your account was credited ${amount} credits.`)
+  } else {
+    showModal('CryptoCredits', `Your account was debited ${amount} credits.`)
+  }
+}
+
+
+startGame(0, 0, true)
