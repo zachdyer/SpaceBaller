@@ -31,7 +31,7 @@ let player = {
 }
 let rng = new Math.seedrandom(player.starID)
 let maxStations = Math.floor(rng() * maxSpaceStationImages) + 1
-let starSystem = generateStarSystem()
+let starSystem = generateStarSystem(player.starID)
 const npcElements = {
   avatar: document.querySelector('#npc-avatar'),
   thumb: document.querySelector('#npc-chat-avatar'),
@@ -55,13 +55,16 @@ function generateStation() {
     jobs: []
   }
 }
-function generateStarSystem() {
+function generateStarSystem(id) {
+  let rng = new Math.seedrandom(id)
   const word1 = ["Alpha", "Sirius", "Betelgeuse", "Proxima", "Vega", "Polaris", "Antares", "Deneb", "Epsilon", "Tau", "Wolf", "Kepler", "Trappist", "Gliese", "HD", "Eta", "Zeta", "Sagittarius", "Cygnus", "Orion"];
   const word2 = ["Eridani", "Ceti", "359", "186", "1", "581", "209458", "Carinae", "Reticuli", "A*", "X-1", "Nebula"];
   const totalStations = Math.floor(rng() * 10) + 2
   for (let i = 0; i < totalStations; i++) {
     spaceStations.push(generateStation())
   }
+  // Sort stations by star distance
+  spaceStations.sort((a, b) => a.starDistance - b.starDistance);
   return {
     name: `${word1[Math.floor(rng() * word1.length)]} ${word2[Math.floor(rng() * word2.length)]}`,
     image: `url(../img/star-system-${Math.floor(rng() * maxStarSystemImages) + 1}.png)`,
@@ -331,7 +334,7 @@ function emergencyTow(){
     }
   }
   movePlayer(closestStation, false)
-  player.setCredits(player.credits - 10000)
+  updateCredits(-10000)
 }
 function warpView(){
   pilotWindow.style.backgroundImage = 'url(../img/warp.gif)';
@@ -400,10 +403,10 @@ function starportRefuel(){
     "Fueling process completed. Ready for departure. Have a stellar journey!"
   ]
   setMessage(pick(sentence, false))
-  powerNavigation(true)
   updateCredits(-cost)
   clearComms()
   commsButton('Exit', stationMainMenu)
+  navigationMenu()
 }
 function navigationMenu(){
   // Clear navigation list
@@ -411,9 +414,8 @@ function navigationMenu(){
     navigation.removeChild(navigation.firstChild);
   }
   // Build and rebuild navigation list
-  spaceStations.sort((a, b) => a.starDistance - b.starDistance);
   spaceStations.forEach(station => {
-    if(station != player.station) {
+    if(station) {
       const li = document.createElement('li');
       const stationInfo = document.createElement('span')
       li.setAttribute('class', 'list-group-item d-flex justify-content-between align-items-center');
@@ -424,7 +426,11 @@ function navigationMenu(){
       const button = document.createElement('button');
       button.setAttribute('class', 'btn btn-primary float-end btn-navigate');
       button.textContent = 'Navigate';
-      if(fuelLevel <= 0) button.disabled = true
+      if(fuelLevel <= 0 || station == player.station) {
+        button.disabled = true
+      } else {
+        button.disabled = false
+      }
       button.addEventListener('click', () => {
         // Remove highlighting from all list items
         const listItems = document.querySelectorAll('.list-group-item');
@@ -440,7 +446,9 @@ function navigationMenu(){
       })
       li.appendChild(stationInfo);
       li.appendChild(button);
+      if(station == player.station) li.classList.add('active')
       navigation.appendChild(li);
+
     }
   })
 }
@@ -453,8 +461,9 @@ function movePlayer(station, fuel = true) {
   const hackerspeed = 1
   const velocity = (player.starDistance < station.starDistance) ? hackerspeed : -hackerspeed
   if(fuel) fuelTankBar.classList.add('progress-bar-animated')
+  powerNavigation(true)
   navigationInterval = setInterval(() => {
-    // Increment player distance by 1 Mm per millisecond
+    // Increment player distance by 1 million miles per millisecond
     player.starDistance += velocity;
     hudLocation.textContent = station.name;
     // Player has arrived at station
@@ -481,22 +490,22 @@ function addJob(job){
   if(player.station == job.destination && player.location == job.destination.jobNPC.dept) {
     button.textContent = `Complete ${job.type}`
     button.addEventListener('click', ()=>{
-      console.log(job)
       displayComms(
         job.destination.jobNPC.image,
         job.destination.jobNPC.name,
         job.destination.jobNPC.dept,
-        `You brought the data! I can finally login now. Thanks for delivering it here all the way from ${job.jobStation.jobNPC.dept}.`,
+        `You brought the data! I can finally login now. Thanks for delivering it here all the way from ${job.jobStation.name}.`,
         ()=>{
           player.jobs = remove(player.jobs, job)
-          player.setCredits(player.credits + job.pay)
-          showModal('CryptoCredits Earned', `Your account was credited ${job.pay} credits.`)
+          updateCredits(job.pay)
           activeContracts()
           job.jobStation.jobs.forEach(job => {
             if (job === job) {
-              job.status = 'available';
+              job.jobStation.jobs = remove(job.jobStation.jobs, job)
+              job.jobStation.jobs.push(generateJob(job.jobStation))
             }
           });
+          
         }
       )
     })
@@ -514,7 +523,7 @@ function addJob(job){
   document.querySelector('#active-jobs').appendChild(button)
   return button
 }
-function startGame(fuel = 0, credits = 0, station = false){
+function startGame(fuel = 0, credits = 0, station = null, starID = 0){
   hudTitle.textContent = starSystem.name
   pilotWindow.style.backgroundImage = starSystem.image
   spaceStations.forEach(station =>{
@@ -525,18 +534,20 @@ function startGame(fuel = 0, credits = 0, station = false){
   player.setCredits(credits)
   player.shipName = generateShipName()
   if(station) {
-    player.station = spaceStations[0]
+    player.station = station
     player.location = player.station.name
     player.starDistance = player.station.starDistance
     stationMainMenu()
-    pilotWindow.style.backgroundImage = player.station.image;
+    pilotWindow.style.backgroundImage = player.station.image
   }
   navigationMenu()
   // Closes the dialogue box
   document.querySelector('#dialogue-close').addEventListener('click', () => {
     document.querySelector('#dialogue-box').close();
   })
-  if(player.location) hudLocation.textContent = player.location
+  if(player.location) {
+    hudLocation.textContent = player.location
+  }
 }
 function activeContracts(){
   const activeJobs = document.querySelector('#active-jobs')
@@ -570,4 +581,4 @@ function updateCredits(amount){
   }
 }
 
-startGame(0, 0, true)
+startGame(0, 0, null, player.starID)
