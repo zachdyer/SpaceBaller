@@ -15,7 +15,7 @@ const shipComms = document.querySelector('#ship-comms')
 const credits = document.querySelector('#credits')
 let player = {
   starDistance: 0,
-  starID: 1,
+  starID: 3,
   image: `img/player-spaceship-3.png`,
   shipName: 'StarBaller',
   shipModel: 'Planetary Cruiser',
@@ -26,7 +26,8 @@ let player = {
     player.credits = amount
     credits.textContent = player.credits
   },
-  jobs: []
+  jobs: [],
+  location: null
 }
 let rng = new Math.seedrandom(player.starID)
 let maxStations = Math.floor(rng() * maxSpaceStationImages) + 1
@@ -57,9 +58,14 @@ function generateStation() {
 function generateStarSystem() {
   const word1 = ["Alpha", "Sirius", "Betelgeuse", "Proxima", "Vega", "Polaris", "Antares", "Deneb", "Epsilon", "Tau", "Wolf", "Kepler", "Trappist", "Gliese", "HD", "Eta", "Zeta", "Sagittarius", "Cygnus", "Orion"];
   const word2 = ["Eridani", "Ceti", "359", "186", "1", "581", "209458", "Carinae", "Reticuli", "A*", "X-1", "Nebula"];
+  const totalStations = Math.floor(rng() * 10) + 2
+  for (let i = 0; i < totalStations; i++) {
+    spaceStations.push(generateStation())
+  }
   return {
     name: `${word1[Math.floor(rng() * word1.length)]} ${word2[Math.floor(rng() * word2.length)]}`,
-    image: `url(../img/star-system-${Math.floor(rng() * maxStarSystemImages) + 1}.png)`
+    image: `url(../img/star-system-${Math.floor(rng() * maxStarSystemImages) + 1}.png)`,
+    stations: spaceStations
   }
 }
 function updateListContent() {
@@ -77,7 +83,7 @@ function setFuelLevel(amount){
   else
     fuelTankBar.style.width = `0%`
 }
-function displayComms(avatar = 'img/loader.gif', name = 'Loading Contact...', dept = 'Loading Info...', message = '', callback = null, delay = 1){
+function displayComms(avatar = 'img/loader.gif', name = 'Loading Contact...', dept = 'Loading Info...', message = '', callback = null, delay = Math.random()*3000){
   npcElements.profile.style.display = 'block'
   log.style.display = 'block'
   npcElements.avatar.style.backgroundImage = `url(img/loader.gif)`
@@ -230,6 +236,7 @@ function stationMainMenu(){
   hideComms()
   commsButton(player.station.mechanicNPC.dept, stationShipMenu)
   commsButton(player.station.jobNPC.dept, stationJobMenu)
+  player.location = player.station.name
 }
 function stationShipMenu(){
   clearComms()
@@ -244,6 +251,7 @@ function stationShipMenu(){
       if(fuelLevel == fuelTankCapacity) refuel.disabled = true
       commsButton('Exit', stationMainMenu)
     })
+    player.location = player.station.mechanicNPC.dept
 }
 function stationJobMenu(){
   clearComms()
@@ -266,6 +274,8 @@ function stationJobMenu(){
       commsButton('Exit', stationMainMenu)
     }
   )
+  player.location = player.station.jobNPC.dept
+  activeContracts()
 }
 function acceptJob(job){
   setMessage(`Come back when you finish the ${job.type} and collect your CrypoCredits.`)
@@ -457,6 +467,7 @@ function movePlayer(station, fuel = true) {
       hideComms()
       fuelTankBar.classList.remove('progress-bar-animated')
       navigationMenu()
+      player.location = player.station.name
       activeContracts()
     }
     updateListContent()
@@ -467,7 +478,7 @@ function addJob(job){
   const button = document.createElement('button')
   button.classList.add('btn')
   button.classList.add('btn-primary')
-  if(player.station == job.destination) {
+  if(player.station == job.destination && player.location == job.destination.jobNPC.dept) {
     button.textContent = `Complete ${job.type}`
     button.addEventListener('click', ()=>{
       console.log(job)
@@ -506,9 +517,6 @@ function addJob(job){
 function startGame(fuel = 0, credits = 0, station = false){
   hudTitle.textContent = starSystem.name
   pilotWindow.style.backgroundImage = starSystem.image
-  for (let i = 0; i < maxStations; i++) {
-    spaceStations.push(generateStation())
-  }
   spaceStations.forEach(station =>{
     station.jobs.push(generateJob(station))
   })
@@ -518,14 +526,17 @@ function startGame(fuel = 0, credits = 0, station = false){
   player.shipName = generateShipName()
   if(station) {
     player.station = spaceStations[0]
+    player.location = player.station.name
     player.starDistance = player.station.starDistance
     stationMainMenu()
     pilotWindow.style.backgroundImage = player.station.image;
   }
   navigationMenu()
+  // Closes the dialogue box
   document.querySelector('#dialogue-close').addEventListener('click', () => {
     document.querySelector('#dialogue-box').close();
   })
+  if(player.location) hudLocation.textContent = player.location
 }
 function activeContracts(){
   const activeJobs = document.querySelector('#active-jobs')
@@ -558,6 +569,5 @@ function updateCredits(amount){
     showModal('CryptoCredits', `Your account was debited ${amount} credits.`)
   }
 }
-
 
 startGame(0, 0, true)
