@@ -10,10 +10,8 @@ body {
   padding: 0;
   background-image: url(../img/sci-fi-hull-texture-1.jpg);
 }
-
 #pilot-window {
   background-size: cover;
-  animation: sway 60s infinite;
   color: lime;
   text-shadow: 0px 0px 10px black;
   font-family: 'Orbitron', sans-serif;
@@ -22,8 +20,8 @@ body {
   position: relative;
   overflow-y: scroll;
   height: 45vh;
+  background-position-y: 66%;
 }
-
 #pilot-window::before {
   content: "";
   position: absolute;
@@ -68,6 +66,9 @@ body {
 }
 .bg-lime {
   background-color: lime;
+}
+.sway-animation {
+  animation: sway 60s infinite;
 }
 #navigation .list-group-item.active {
   border-color: lime;
