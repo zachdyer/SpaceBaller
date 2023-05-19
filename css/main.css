@@ -69,6 +69,27 @@ body {
 .bg-lime {
   background-color: lime;
 }
+#navigation .list-group-item.active {
+  border-color: lime;
+}
+#navigation .list-group-item {
+  border-color: #333;
+}
+.btn-primary {
+  background-color: lime;
+  color: #333;
+  border-radius: 0;
+  border: 0;
+}
+.btn-primary:hover {
+  background-color: white;
+  color: #333;
+}
+.btn:disabled {
+  background-color: rgb(13, 49, 13);
+  color:rgb(34, 136, 34)
+}
+ 
 
 @keyframes sway {
   0% {

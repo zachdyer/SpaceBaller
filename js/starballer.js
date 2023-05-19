@@ -42,17 +42,21 @@ const npcElements = {
 }
 
 function generateStation() {
-  const spaceStationNames1 = ["Lunaris", "Stellar", "Nebula", "Galactic", "Astrocore", "Celestial", "Orion", "Cosmos", "Infinity", "Nova", "Serenity", "Quantum", "Interstellar", "Aurora", "Cosmic"]
-  const spaceStationNames2 = ["Station", "Nexus", "Prime", "Horizon", "Citadel", "Outpost", "Haven", "Orbital", "Command", "Vertex", "Hub", "Base", "Sanctuary"]
-  let stationName = `${spaceStationNames1[Math.floor(rng() * spaceStationNames1.length)]} ${spaceStationNames2[Math.floor(rng() * spaceStationNames2.length)]}`
+  const spaceStationNames1 = pick(["Lunaris", "Stellar", "Nebula", "Galactic", "Astrocore", "Celestial", "Orion", "Cosmos", "Infinity", "Nova", "Serenity", "Quantum", "Interstellar", "Aurora", "Cosmic", "Pulsar", "Eclipse", "Astrostar", "Supernova", "Astroverse"]);
+  const spaceStationNames2 = pick(["Station", "Nexus", "Prime", "Horizon", "Citadel", "Outpost", "Haven", "Orbital", "Command", "Vertex", "Hub", "Base", "Sanctuary", "Observatory", "Gateway", "Spire", "Expanse", "Fortress", "Refuge", "Center"]);
+  const company = pick(["Systems", "Industrial", "Corporation", "Science", "Enterprises", "Union", "Core", "Tec", "Dynamic", "Industries", "Industry", "Commercial"])
+  const stationName = `${spaceStationNames1} ${spaceStationNames2}`
+  let companyName = `${stationName} ${company}`
+  console.log(companyName)
   return {
     name: stationName,
     image: `url(../img/space-station-${Math.floor(rng() * maxSpaceStationImages) + 1}.png)`,
     starDistance: Math.floor(rng() * 5000),
-    mechanicNPC: generateNPC('mechanic', true, `${stationName} Ship Services`),
-    jobNPC: generateNPC('office', true, `${stationName} Human Resources`),
-    generalNPC: generateNPC('office', true, `${stationName} Main Office`),
-    jobs: []
+    mechanicNPC: generateNPC('mechanic', true, `${stationName} Shipyard`),
+    jobNPC: generateNPC('office', true, companyName),
+    jobs: [],
+    company: companyName,
+    payPerMillionMiles: Math.floor(rng() * 8) + 2
   }
 }
 function generateStarSystem(id) {
@@ -200,9 +204,10 @@ function emergencyFuelRequest(){
 }
 function generateShipName() {
     let words = [
-      ["Starfire", "Cosmosphere", "Astroblade", "Stellaris", "Galactron", "Nebula", "Celestial", "Interstellar", "Lunar", "Cosmic", "Orion's", "Nova", "Quantum", "Eclipse", "Astroscout", "Cosmic", "Infinity", "Stardust", "Hypernova", "Solar"],
-      ["Voyager", "Wing", "Phoenix", "Sentinel", "Serpent", "Fury", "Explorer", "Dawn", "Raider", "Crusader", "Falcon", "Voyager", "Flare"]
-    ]
+      ["Starfire", "Cosmosphere", "Astroblade", "Stellaris", "Galactron", "Nebula", "Celestial", "Interstellar", "Lunar", "Cosmic", "Orion's", "Nova", "Quantum", "Eclipse", "Astroscout", "Cosmic", "Infinity", "Stardust", "Hypernova", "Solar", "Aurora", "Spectrum", "Astroflux", "Celestia", "Astroverse"],
+      ["Voyager", "Wing", "Phoenix", "Sentinel", "Serpent", "Fury", "Explorer", "Dawn", "Raider", "Crusader", "Falcon", "Voyager", "Flare", "Cosmos", "Nighthawk", "Horizon", "Supernova", "Nova", "Stargazer", "Nebulus", "Stellar", "Aether", "Elysium", "Orbiter", "Infinity"]
+    ];
+
     return `${words[0][Math.floor(rng()*words[0].length)]} ${words[1][Math.floor(rng()*words[1].length)]}`
 }
 function starportFuelRequest(){
@@ -238,7 +243,7 @@ function stationMainMenu(){
   clearComms()
   hideComms()
   commsButton(player.station.mechanicNPC.dept, stationShipMenu)
-  commsButton(player.station.jobNPC.dept, stationJobMenu)
+  commsButton(player.station.company, stationJobMenu)
   player.location = player.station.name
 }
 function stationShipMenu(){
@@ -258,7 +263,7 @@ function stationShipMenu(){
 }
 function stationJobMenu(){
   clearComms()
-  let message = `Welcome to ${player.station.jobNPC.dept}.`
+  let message = `Welcome to ${player.station.company}.`
   player.station.jobs.forEach(job => {
     if(job.status == 'active') {
       message = `How's that ${job.type} going? If you have an questions check your active missions file.`
@@ -267,7 +272,7 @@ function stationJobMenu(){
   displayComms(
     player.station.jobNPC.image,
     player.station.jobNPC.name,
-    player.station.jobNPC.dept,
+    player.station.company,
     message,
     ()=>{
       player.station.jobs.forEach(job => {
@@ -275,13 +280,14 @@ function stationJobMenu(){
           commsButton(job.type, job.details)
       })
       commsButton('Exit', stationMainMenu)
+      player.location = player.station.company
+      activeContracts()
     }
   )
-  player.location = player.station.jobNPC.dept
-  activeContracts()
+  
 }
 function acceptJob(job){
-  setMessage(`Come back when you finish the ${job.type} and collect your CrypoCredits.`)
+  setMessage(`I've uploaded your contract data to ${player.shipName}. `)
   clearComms()
   commsButton('Exit', stationMainMenu)
   addJob(job)
@@ -364,9 +370,8 @@ function generateJob(jobStation){
     let availableStations = spaceStations.filter((station) => station != jobStation)
     missionStation = pick(availableStations, false)
     let totalDistance = Math.abs(missionStation.starDistance - jobStation.starDistance)
-    let payPerMillionMiles = 3
-    pay = totalDistance * payPerMillionMiles
-    message = `We need you to deliver this encrypted data to ${missionStation.name}. We will pay you ${payPerMillionMiles} credits per million miles traveled. We agree to pay ${pay} credits.`
+    pay = totalDistance * jobStation.payPerMillionMiles
+    message = `${type} Contract: Deliver ${jobStation.company} encrypted data to ${missionStation.company}. ${jobStation.company} pays ${jobStation.payPerMillionMiles} credits per million miles traveled. ${jobStation.company} agrees to pay ${pay} CryptoCredits on confirmed delivery.`
   }
   let job = {
     type: type,
@@ -413,43 +418,42 @@ function navigationMenu(){
   while (navigation.firstChild) {
     navigation.removeChild(navigation.firstChild);
   }
+  let closestStation = findClosestStation()
   // Build and rebuild navigation list
   spaceStations.forEach(station => {
-    if(station) {
-      const li = document.createElement('li');
-      const stationInfo = document.createElement('span')
-      li.setAttribute('class', 'list-group-item d-flex justify-content-between align-items-center');
-      li.setAttribute('data-station-name', station.name);
-      li.setAttribute('data-station-distance', station.starDistance);
-      const distance = Math.abs(station.starDistance - player.starDistance)
-      stationInfo.textContent = `${station.name} ${distance} Mm`;
-      const button = document.createElement('button');
-      button.setAttribute('class', 'btn btn-primary float-end btn-navigate');
-      button.textContent = 'Navigate';
-      if(fuelLevel <= 0 || station == player.station) {
-        button.disabled = true
-      } else {
-        button.disabled = false
-      }
-      button.addEventListener('click', () => {
-        // Remove highlighting from all list items
-        const listItems = document.querySelectorAll('.list-group-item');
-        listItems.forEach(item => {
-          item.classList.remove('active');
-        });
-        movePlayer(station)
-        // Highlight the clicked list item
-        li.classList.add('active')
-        hideComms()
-        player.isInFlight = true
-        clearComms()
-      })
-      li.appendChild(stationInfo);
-      li.appendChild(button);
-      if(station == player.station) li.classList.add('active')
-      navigation.appendChild(li);
-
+    const li = document.createElement('li');
+    const stationInfo = document.createElement('span')
+    li.setAttribute('class', 'list-group-item d-flex justify-content-between align-items-center bg-dark text-bg-dark');
+    li.setAttribute('data-station-name', station.name);
+    li.setAttribute('data-station-distance', station.starDistance);
+    const distance = Math.abs(station.starDistance - player.starDistance)
+    stationInfo.textContent = `${station.name} ${distance} Mm`;
+    const button = document.createElement('button');
+    button.setAttribute('class', 'btn btn-primary float-end btn-navigate');
+    button.textContent = 'Navigate';
+    if(fuelLevel <= 0 || station == player.station) {
+      button.disabled = true
+    } else {
+      button.disabled = false
     }
+    button.addEventListener('click', () => {
+      // Remove highlighting from all list items
+      const listItems = document.querySelectorAll('.list-group-item');
+      listItems.forEach(item => {
+        item.classList.remove('active');
+      });
+      movePlayer(station)
+      // Highlight the clicked list item
+      // li.classList.add('active')
+      hideComms()
+      player.isInFlight = true
+      clearComms()
+    })
+    li.appendChild(stationInfo);
+    li.appendChild(button);
+    if(station == closestStation) li.classList.add('active')
+    navigation.appendChild(li);
+    
   })
 }
 function movePlayer(station, fuel = true) {
@@ -480,6 +484,7 @@ function movePlayer(station, fuel = true) {
       activeContracts()
     }
     updateListContent()
+    navigationMenu()
     if(fuel) setFuelLevel(fuelLevel - 1)
   }, 1)
 }
@@ -487,13 +492,13 @@ function addJob(job){
   const button = document.createElement('button')
   button.classList.add('btn')
   button.classList.add('btn-primary')
-  if(player.station == job.destination && player.location == job.destination.jobNPC.dept) {
+  if(player.station == job.destination && player.location == job.destination.company) {
     button.textContent = `Complete ${job.type}`
     button.addEventListener('click', ()=>{
       displayComms(
         job.destination.jobNPC.image,
         job.destination.jobNPC.name,
-        job.destination.jobNPC.dept,
+        job.destination.company,
         `You brought the data! I can finally login now. Thanks for delivering it here all the way from ${job.jobStation.name}.`,
         ()=>{
           player.jobs = remove(player.jobs, job)
@@ -516,7 +521,8 @@ function addJob(job){
         player.image,
         player.shipName,
         player.shipModel,
-        job.info
+        job.info, 
+        null, 1    
       )
     })
   }
@@ -532,7 +538,6 @@ function startGame(fuel = 0, credits = 0, station = null, starID = 0){
   setFuelLevel(fuel)
   if(fuel == 0) fuelLevelAlert()
   player.setCredits(credits)
-  player.shipName = generateShipName()
   if(station) {
     player.station = station
     player.location = player.station.name
@@ -579,6 +584,15 @@ function updateCredits(amount){
   } else {
     showModal('CryptoCredits', `Your account was debited ${amount} credits.`)
   }
+}
+function findClosestStation() {
+  let closestStation = spaceStations[0];
+  spaceStations.forEach(station => {
+    if (Math.abs(station.starDistance - player.starDistance) < Math.abs(closestStation.starDistance - player.starDistance)) {
+      closestStation = station;
+    }
+  });
+  return closestStation;
 }
 
 startGame(0, 0, null, player.starID)
