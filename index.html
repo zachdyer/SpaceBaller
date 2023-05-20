@@ -23,7 +23,7 @@
                 <div class="col-3 d-flex flex-column h-100">
                   <h1 id="hud-title">Star System Info</h1>
                   <p id="hud-location">Location Info...</p>
-                  <div class="d-flex align-items-center mt-auto">
+                  <div class="d-flex align-items-center mt-auto" id="fuel-guage">
                     <div class="flex-shrink-0">
                       <i class="bi bi-fuel-pump-fill"></i>
                     </div>
@@ -78,7 +78,7 @@
 
       <div class="row">
         <div class="col-lg-4 mb-2">
-          <div class="screen bg-dark rounded p-3 sci-fi-device">
+          <div class="screen bg-dark p-3 sci-fi-device">
             <h2>Star System Navigator</h2>
             <div class="spaceship-controls">
               <!-- Add spaceship controls here -->
@@ -87,18 +87,18 @@
           </div>
         </div>
         <div class="col-lg-4 mb-2">
-          <div class="screen bg-dark sci-fi-device rounded p-3">
+          <div class="screen bg-dark sci-fi-device p-3">
             <h2>Comms</h2>
             <div id="ship-comms" class="d-grid gap-2"></div>
           </div>
         </div>
         <div class="col-lg-4 mb-2">
-          <div class="screen bg-dark rounded p-3 sci-fi-device">
+          <div class="screen bg-dark p-3 sci-fi-device">
             <h2>CryptoCredits</h2>
             <div class="ship-inventory mb-5">
               <i class="bi bi-currency-bitcoin"></i>: <span id="credits"></span>
             </div>
-            <h2 id="active-jobs-header">Active Contracts</h2>
+            <h2 id="active-jobs-header">Documents</h2>
             <div id="active-jobs" class="d-grid gap-2"></div>
           </div>
         </div>
@@ -108,7 +108,11 @@
     <dialog id="dialogue-box" class="bg-dark text-bg-dark sci-fi-font">
       <h1 id="dialogue-title">Dialogue Box</h1>
       <p id="dialogue-message">Your message goes here.</p>
+      <div class="input-group mb-3">
+        <input type="text" class="form-control" placeholder="Name" id="dialogue-text-input">
+      </div>
       <button id="dialogue-close" class="btn btn-primary">Close</button>
+      <button id="dialogue-confirm" class="btn btn-primary d-none">Confirm</button>
     </dialog>
 
     <script

@@ -2,14 +2,11 @@ let maxSpaceStationImages = 7
 let maxStarSystemImages = 5
 let hudTitle = document.querySelector('#hud-title')
 let hudLocation = document.querySelector('#hud-location')
-let pilotWindow = document.querySelector('#pilot-window')
 let navigation = document.querySelector('#navigation')
 let spaceStations = []
-let navigationInterval
 let fuelTankCapacity = 5000
-let fuelLevel = 0
+let fuelLevel = 5000
 let fuelTankBar = document.querySelector('#fuel-tank')
-const log = document.querySelector('#log')
 let emergencyFuelPilot = generateNPC('pilot', false, 'Emergency Fuel Services')
 const shipComms = document.querySelector('#ship-comms')
 const credits = document.querySelector('#credits')
@@ -27,19 +24,15 @@ let player = {
     credits.textContent = player.credits
   },
   jobs: [],
-  location: null
+  location: null,
+  documents: [],
+  ship: null,
+  pilotLicense: null,
+  name: `SpaceBaller`
 }
 let rng = new Math.seedrandom(player.starID)
 let maxStations = Math.floor(rng() * maxSpaceStationImages) + 1
 let starSystem = generateStarSystem(player.starID)
-const npcElements = {
-  avatar: document.querySelector('#npc-avatar'),
-  thumb: document.querySelector('#npc-chat-avatar'),
-  profile: document.querySelector('#npc'),
-  message: document.querySelector('#npc-message'),
-  name: document.querySelector('#npc-name'),
-  dept: document.querySelector('#npc-dept')
-}
 
 function generateStation() {
   const spaceStationNames1 = pick(["Lunaris", "Stellar", "Nebula", "Galactic", "Astrocore", "Celestial", "Orion", "Cosmos", "Infinity", "Nova", "Serenity", "Quantum", "Interstellar", "Aurora", "Cosmic", "Pulsar", "Eclipse", "Astrostar", "Supernova", "Astroverse"]);
@@ -50,10 +43,10 @@ function generateStation() {
   console.log(companyName)
   return {
     name: stationName,
-    image: `url(../img/space-station-${Math.floor(rng() * maxSpaceStationImages) + 1}.png)`,
+    image: `img/space-station-${Math.floor(rng() * maxSpaceStationImages) + 1}.png`,
     starDistance: Math.floor(rng() * 5000),
-    mechanicNPC: generateNPC('mechanic', true, `${stationName} Shipyard`, null, `url('img/sci-fi-shipyard (${Math.floor(rng()* 13)+ 1}).png')`),
-    jobNPC: generateNPC('office', true, companyName, null, `url('img/sci-fi-office-bg (${Math.floor(rng()* 22)+ 1}).png')`),
+    mechanicNPC: generateNPC('mechanic', true, `${stationName} Shipyard`, null, `img/sci-fi-shipyard (${Math.floor(rng()* 13)+ 1}).png`),
+    jobNPC: generateNPC('office', true, companyName, null, `img/sci-fi-office-bg (${Math.floor(rng()* 22)+ 1}).png`),
     jobs: [],
     company: companyName,
     payPerMillionMiles: Math.floor(rng() * 8) + 2
@@ -71,11 +64,11 @@ function generateStarSystem(id) {
   spaceStations.sort((a, b) => a.starDistance - b.starDistance);
   return {
     name: `${word1[Math.floor(rng() * word1.length)]} ${word2[Math.floor(rng() * word2.length)]}`,
-    image: `url(../img/star-system-${Math.floor(rng() * maxStarSystemImages) + 1}.png)`,
+    image: `img/star-system-${Math.floor(rng() * maxStarSystemImages) + 1}.png`,
     stations: spaceStations
   }
 }
-function updateListContent() {
+function updateNavigator() {
   const listItems = document.querySelectorAll('.list-group-item');
   listItems.forEach(item => {
     const stationName = item.getAttribute('data-station-name');
@@ -86,36 +79,29 @@ function updateListContent() {
 function setFuelLevel(amount){
   fuelLevel = amount
   if(amount)
-    fuelTankBar.style.width = `${Math.floor(fuelLevel / fuelTankCapacity * 100)}%`
+    fuelTankBar.style.width = `${Math.floor(amount / fuelTankCapacity * 100)}%`
   else
     fuelTankBar.style.width = `0%`
 }
 function displayComms(avatar = 'img/loader.gif', name = 'Loading Contact...', dept = 'Loading Info...', message = '', callback = null, delay = 2000, bgImg = null){
-  npcElements.profile.style.display = 'block'
-  log.style.display = 'block'
-  npcElements.avatar.style.backgroundImage = `url(img/loader.gif)`
+  showComms()
+  setAvatarImage(`img/loader.gif`)
   if(bgImg) {
-    pilotWindow.style.backgroundImage = `url(img/bg-transition.gif)`
-    pilotWindow.classList.remove('sway-animation')
+    setBackgroundImage(`img/bg-transition.gif`)
+    toggleBGSway(false)
   }
-  npcElements.name.textContent = name
-  npcElements.dept.textContent = dept
-  npcElements.thumb.src = player.image
-  npcElements.message.textContent = `Attempting to connect to ${dept}.`
+  setAvatarTitle(name)
+  setAvatarSubtitle(dept)
+  setMessage(`Attempting to connect to ${dept}.`)
   setTimeout(()=> {
-    npcElements.avatar.style.backgroundImage = `url('${avatar}')`
-    npcElements.thumb.src = avatar
-    npcElements.message.textContent = message
+    setAvatarImage(avatar)
+    setMessage(message)
     if(bgImg) {
-      pilotWindow.style.backgroundImage = bgImg
+      setBackgroundImage(bgImg)
       document.querySelector('#monitor').classList.remove('opacity-75')
     }
     if(callback) callback()
   }, delay)
-}
-function hideComms() {
-  npcElements.profile.style.display = 'none'
-  log.style.display = 'none'
 }
 function generateNPC(type, procedural, dept = '', message = '', bgImg = null){
   let name1
@@ -201,7 +187,7 @@ function emergencyFuelRequest(){
         "Fueling process completed. Ready for departure. Have a stellar journey!"
       ]
       setFuelLevel(fuelTankCapacity)
-      npcElements.message.textContent = `${sentence[Math.floor(Math.random()*sentence.length)]}`
+      setMessage(`${sentence[Math.floor(Math.random()*sentence.length)]}`)
       player.credits - 10000
       player.setCredits(player.credits - 10000)
       clearComms()
@@ -220,15 +206,25 @@ function generateShipName() {
 }
 function starportFuelRequest(){
   document.querySelector('#monitor').classList.remove('opacity-75')
-  npcElements.avatar.style.backgroundImage = `url('${player.station.mechanicNPC.image}')`
-  npcElements.name = player.station.mechanicNPC.name
-  npcElements.dept = player.station.mechanicNPC.dept
-  npcElements.thumb.src = player.station.mechanicNPC.image
-  let estimate = fuelTankCapacity - fuelLevel
-  setMessage(`The cost of NovaFuel per gallon is 1 credit. It's literally the cheapest thing you can buy in the galaxy. The government made sure of that. To get you to a full tank your looking at ${estimate} credits.`)
+  setAvatarImage(player.station.mechanicNPC.image)
+  setAvatarTitle(player.station.mechanicNPC.name)
+  setAvatarSubtitle(player.station.mechanicNPC.dept)
   clearComms()
-  commsButton('Confirm', starportRefuel)
-  commsButton('Exit', stationShipMenu)
+  if(player.ship) {
+    let mileage = fuelTankCapacity - fuelLevel
+    let estimate = mileage * 2
+    if(mileage > 0) {
+      setMessage(`Your odometer reads ${mileage} million miles. The cost of NovaFuel per gallon is 1 credit. And the rental is 1 credit per million miles. Total cost for the rental and gas is ${estimate} credits.`)
+      commsButton('Confirm', ()=>starportRefuel(estimate))
+    } else {
+      setMessage(`Our system shows you have a full tank.`)
+    }
+  } else {
+    setMessage(`What ship? It might help if you had a ship to fuel. You can rent a ship for 2 credit per million miles. But you need your pilots license to rent one. Don't look at me like that. It's the law. You can register for a pilots license at ${player.station.company} Main Office.`)
+  }
+  commsButton(`Refuel Ship`, starportFuelRequest)
+  commsButton(`Rent Ship`, rentShip)
+  commsButton('Exit', ()=>{stationShipMenu(0)})
 }
 function fuelLevelAlert(){
   let message = `Danger. Fuel levels are critical. Shutting navigation system down. Recommend Sending a request signal for Emergency Fuel Services.`
@@ -253,31 +249,35 @@ function commsButton(label, func){
 }
 function stationMainMenu(){
   clearComms()
-  hideComms()
-  commsButton(player.station.mechanicNPC.dept, stationShipMenu)
-  commsButton(player.station.company, stationJobMenu)
+  toggleAvatar(false)
+  commsButton(player.station.mechanicNPC.dept, ()=>stationShipMenu(2000))
+  commsButton(player.station.company, ()=> stationJobMenu(2000))
 }
 function stationShipMenu(){
-  clearComms()
-  let message = `Welcome to the ${player.station.mechanicNPC.dept}. What can I do for you?`
-  displayComms(
-    player.station.mechanicNPC.image, 
-    player.station.mechanicNPC.name,
-    player.station.mechanicNPC.dept,
-    message,
+  loadScreen(
+    player.station.mechanicNPC.dept, 
+    `Attempting to connect to ${player.station.mechanicNPC.dept}.`, 
     ()=>{
-      const refuel = commsButton('Refuel', starportFuelRequest)
-      if(fuelLevel == fuelTankCapacity) refuel.disabled = true
+      const message = `Welcome to the ${player.station.mechanicNPC.dept}. What can I do for you?`
+      setAvatarImage(player.station.mechanicNPC.image)
+      setAvatarTitle(player.station.mechanicNPC.name)
+      setAvatarSubtitle(player.station.mechanicNPC.dept)
+      setMessage(message)
+      setBackgroundImage(player.station.mechanicNPC.bgImg)
+      toggleBGSway(false)
+      commsButton('Refuel Ship', starportFuelRequest)
+      commsButton(`Rent Ship`, rentShip)
       commsButton('Exit', exitStation)
-    }, 2000, player.station.mechanicNPC.bgImg)
-    player.location = player.station.mechanicNPC.dept
+      player.location = player.station.mechanicNPC.dept
+  })
 }
-function stationJobMenu(){
+function stationJobMenu(delay = 2000, message){
   clearComms()
-  let message = `Welcome to ${player.station.company}.`
+  
+  if(!message) message = `Welcome to ${player.station.company}. How can I help you?`
   player.station.jobs.forEach(job => {
     if(job.status == 'active') {
-      message = `How's that ${job.type} going? If you have an questions check your active missions file.`
+      message = `How's that ${job.type} going? If you have an questions about the job check your ${job.jobStation.company} contract labeled ${job.destination.name} ${job.type} in your documents.`
     }
   })
   displayComms(
@@ -288,26 +288,31 @@ function stationJobMenu(){
     ()=>{
       player.station.jobs.forEach(job => {
         if(job.status == 'available')
-          commsButton(job.type, job.details)
+          commsButton(`${job.destination.name} ${job.type}`, job.details)
       })
+      if(!player.pilotLicense) commsButton(`${starSystem.name} Pilot License`, pilotLicense)
       commsButton('Exit', exitStation)
       player.location = player.station.company
-      activeContracts()
-      pilotWindow.classList.remove('sway-animation')
-    }, 3000, player.station.jobNPC.bgImg
+      documentsMenu()
+      toggleBGSway(false)
+    }, delay, player.station.jobNPC.bgImg
   )
-  
 }
 function acceptJob(job){
-  setMessage(`I've uploaded your contract data to ${player.shipName}. `)
+  displayComms(
+    player.station.jobNPC.image,
+    player.station.jobNPC.name,
+    player.station.jobNPC.dept,
+    `I've uploaded your contract data to your documents.`,
+    null, 0)
   clearComms()
-  commsButton('Exit', exitStation)
+  commsButton('Exit', ()=> stationJobMenu(0))
   addJob(job)
   document.querySelector('#active-jobs-header').style.display = 'block'
   player.jobs.push(job)
 }
 function setMessage(message) {
-  npcElements.message.textContent = message
+  document.querySelector('#npc-message').innerHTML = message
 }
 function pick(list, procedural = true){
   if(procedural) 
@@ -349,7 +354,7 @@ function emergencyTow(){
   updateCredits(-10000)
 }
 function warpView(){
-  pilotWindow.style.backgroundImage = 'url(../img/warp.gif)';
+  setBackgroundImage('img/warp.gif');
 }
 function powerNavigation(onoff){
   const navButtons = document.querySelectorAll('.btn-navigate')
@@ -382,24 +387,33 @@ function generateJob(jobStation){
   let job = {
     type: type,
     details: ()=>{
-      setMessage(message)
+      let doc = {
+        image: `img/sci-fi-data (${Math.floor(rng()*10)+1}).png`,
+        title: `${jobStation.company} Delivery Contract`,
+        doc: message
+      }
+      viewDoc(doc)
       clearComms()
       commsButton('Accept', ()=> {
-        job.status = 'active'
-        acceptJob(job)
+        if(player.pilotLicense) {
+          job.status = 'active'
+          acceptJob(job)
+        } else {
+          setMessage(`${player.station.company} requires a pilots license for delivery contracts. You can register for one here at our main office for 1000 credits.`)
+        }
       })
-      commsButton('Cancel', stationJobMenu)
+      commsButton('Cancel', ()=> stationJobMenu(0))
     },
     pay: pay,
     status: 'available',
     info: message,
     destination: missionStation,
-    jobStation: jobStation
+    jobStation: jobStation,
+    image: `img/sci-fi-data (${Math.floor(rng()*10)+1}).png`
   }
   return job
 }
-function starportRefuel(){
-  const cost = fuelTankCapacity - fuelLevel
+function starportRefuel(cost){
   setFuelLevel(fuelTankCapacity)
   let sentence = [
     "Fuel replenishment complete. You're good to go. Safe travels!",
@@ -449,9 +463,7 @@ function navigationMenu(){
         item.classList.remove('active');
       });
       movePlayer(station)
-      // Highlight the clicked list item
-      // li.classList.add('active')
-      hideComms()
+      toggleAvatar(false)
       player.isInFlight = true
       clearComms()
     })
@@ -463,36 +475,34 @@ function navigationMenu(){
   })
 }
 function movePlayer(station, fuel = true) {
-  warpView()
-  player.isInFlight = true
-  clearInterval(navigationInterval)
-  // Update player distance every millisecond
-  const lightspeed = 5370
-  const hackerspeed = 1
-  const velocity = (player.starDistance < station.starDistance) ? hackerspeed : -hackerspeed
-  if(fuel) fuelTankBar.classList.add('progress-bar-animated')
-  powerNavigation(true)
-  navigationInterval = setInterval(() => {
-    // Increment player distance by 1 million miles per millisecond
+  warpView();
+  player.isInFlight = true;
+  const lightspeed = 5370;
+  const hackerspeed = 1;
+  const velocity = (player.starDistance < station.starDistance) ? hackerspeed : -hackerspeed;
+  if (fuel) fuelTankBar.classList.add('progress-bar-animated');
+  powerNavigation(true);
+  function animate() {
     player.starDistance += velocity;
     hudLocation.textContent = station.name;
-    // Player has arrived at station
-    if (station.starDistance - player.starDistance == 0) {
-      clearInterval(navigationInterval)
-      pilotWindow.style.backgroundImage = station.image;
-      player.isInFlight = false
-      player.station = station
-      stationMainMenu()
-      hideComms()
-      fuelTankBar.classList.remove('progress-bar-animated')
-      navigationMenu()
-      player.location = player.station.name
-      activeContracts()
+    if (station.starDistance - player.starDistance === 0) {
+      setBackgroundImage(station.image);
+      player.isInFlight = false;
+      player.station = station;
+      stationMainMenu();
+      toggleAvatar(false);
+      fuelTankBar.classList.remove('progress-bar-animated');
+      navigationMenu();
+      player.location = player.station.name;
+      documentsMenu();
+    } else {
+      updateNavigator();
+      navigationMenu();
+      if (fuel) setFuelLevel(fuelLevel - 1);
+      requestAnimationFrame(animate);
     }
-    updateListContent()
-    navigationMenu()
-    if(fuel) setFuelLevel(fuelLevel - 1)
-  }, 1)
+  } 
+  let navigationInterval = requestAnimationFrame(animate);
 }
 function addJob(job){
   const button = document.createElement('button')
@@ -509,25 +519,24 @@ function addJob(job){
         ()=>{
           player.jobs = remove(player.jobs, job)
           updateCredits(job.pay)
-          activeContracts()
+          documentsMenu()
           job.jobStation.jobs.forEach(job => {
             if (job === job) {
               job.jobStation.jobs = remove(job.jobStation.jobs, job)
               job.jobStation.jobs.push(generateJob(job.jobStation))
             }
           });
-          
         }
       )
     })
-  } else {
+  } else { //If the player clicks the document and not at the mission destination
     button.textContent = `${job.destination.name} ${job.type}`
     button.addEventListener('click', ()=>{
       document.querySelector('#monitor').classList.add('opacity-75')
       displayComms(
-        player.image,
-        player.shipName,
-        player.shipModel,
+        'img/loader.gif',
+        `${job.destination.name} ${job.type}`,
+        `${job.jobStation.company} Contract`,
         job.info, 
         null, 1    
       )
@@ -536,21 +545,21 @@ function addJob(job){
   document.querySelector('#active-jobs').appendChild(button)
   return button
 }
-function startGame(fuel = 0, credits = 0, station = null, starID = 0){
+function startGame(station = null){
   hudTitle.textContent = starSystem.name
-  pilotWindow.style.backgroundImage = starSystem.image
+  setBackgroundImage(starSystem.image)
   spaceStations.forEach(station =>{
     station.jobs.push(generateJob(station))
   })
-  setFuelLevel(fuel)
-  if(fuel == 0) fuelLevelAlert()
-  player.setCredits(credits)
+  setFuelLevel(fuelLevel)
+  if(fuelLevel == 0) fuelLevelAlert()
+  player.setCredits(player.credits)
   if(station) {
     player.station = station
     player.location = player.station.name
     player.starDistance = player.station.starDistance
     exitStation()
-    pilotWindow.style.backgroundImage = player.station.image
+    setBackgroundImage(player.station.image)
   }
   navigationMenu()
   // Closes the dialogue box
@@ -560,16 +569,28 @@ function startGame(fuel = 0, credits = 0, station = null, starID = 0){
   if(player.location) {
     hudLocation.textContent = player.location
   }
+  if(!player.ship) {
+    toggleGuages(false)
+    toggleBGSway(false)
+  }
 }
-function activeContracts(){
+function documentsMenu(){
   const activeJobs = document.querySelector('#active-jobs')
   while (activeJobs.firstChild) {
     activeJobs.removeChild(activeJobs.firstChild);
   }
-  if(player.jobs.length) {
+  if(player.jobs.length || player.documents.length) {
     document.querySelector('#active-jobs-header').style.display = 'block'
     player.jobs.forEach(job => {
       addJob(job)
+    })
+    player.documents.forEach(doc => {
+      const button = document.createElement('button')
+      button.classList.add('btn')
+      button.classList.add('btn-primary')
+      button.textContent = doc.title
+      button.addEventListener('click', ()=> viewDoc(doc))
+      document.querySelector('#active-jobs').appendChild(button)
     })
   } else {
     document.querySelector('#active-jobs-header').style.display = 'none'
@@ -578,11 +599,18 @@ function activeContracts(){
 function remove(array, element) {
   return array.filter(item => item !== element);
 }
-function showModal(title, message){
+function showModal(title, message, confirm = null){
   const dialogueBox = document.querySelector('#dialogue-box')
   dialogueBox.showModal()
   document.querySelector('#dialogue-title').textContent = title
   document.querySelector('#dialogue-message').textContent = message
+  const confirmBtn = document.querySelector('#dialogue-confirm')
+  if(confirm) { 
+    confirmBtn.classList.remove('d-none')
+    confirmBtn.addEventListener('click', confirm)
+  } else {
+    confirmBtn.classList.add('d-none')
+  }
 }
 function updateCredits(amount){
   player.setCredits(player.credits + amount)
@@ -602,16 +630,129 @@ function findClosestStation() {
   return closestStation;
 }
 function exitStation(){
-  hideComms()
+  toggleAvatar(false)
   clearComms()
-  pilotWindow.style.backgroundImage = `url(img/bg-transition.gif)`
+  setBackgroundImage(`img/bg-transition.gif`)
   document.querySelector('#monitor').classList.add('opacity-75')
   setTimeout(()=>{
-    pilotWindow.style.backgroundImage = player.station.image
-    pilotWindow.classList.add('sway-animation')
+    setBackgroundImage(player.station.image)
+    toggleBGSway(true)
     player.location = player.station.name
     stationMainMenu()
   },2000)
 }
+function pilotLicense(){
+  showModal(`${starSystem.name} Pilot License`, `The ${starSystem.name} Pilot License is required for commercial level flight in ${starSystem.name}. The registration cost is 1000 credits. Enter your name and confirm.`, registerPilotLicense)
+  document.querySelector('#dialogue-text-input').classList.remove('d-none')
+  document.querySelector('#dialogue-text-input').value = player.name
+}
+function registerPilotLicense(){
+  const name = document.querySelector('#dialogue-text-input').value
+  player.name = name
+  player.pilotLicense = {
+    name: name,
+    starSystem: starSystem.name,
+    signature: player.station.jobNPC.name,
+    issuer: player.station.company,
+    code: `COM-${player.station.starDistance}`
+  }
+  hideModalInput()
+  closeModal()
+  updateCredits(-1000)
+  addDoc(`${starSystem.name} Pilots License`, 
+  `<b>${player.pilotLicense.starSystem} Commercial Pilot's License</b><br>License Holder's Name: ${name}<br>License Number: ${player.pilotLicense.code}<br>Issuer: ${player.pilotLicense.issuer}<br>Issuer Signature: ${player.pilotLicense.signature}`, 
+  `img/official-doc (${Math.floor(rng()*4)+1}).png`)
+  stationJobMenu(0, `Congrats, ${player.name}! I've registered your pilot license into the ${starSystem.name} archives and your application has already been approved. You should receive your pilots license in your documents soon.`)
+}
+function closeModal(){
+  document.querySelector('#dialogue-box').close();
+}
+function hideModalInput(){
+  document.querySelector('#dialogue-text-input').classList.add('d-none')
+}
+function showModalInput(){
+  document.querySelector('#dialogue-text-input').classList.remove('d-none')
+}
+function addDoc(title, doc, image){
+  player.documents.push({title: title, doc: doc, image: image})
+  documentsMenu()
+}
+function viewDoc(doc){
+  document.querySelector('#monitor').classList.add('opacity-75')
+  displayComms(
+    doc.image,
+    `${doc.title}`,
+    `${player.name} Document`,
+    doc.doc, 
+    null, 1    
+  )
+}
+function setAvatarImage(path){
+  document.querySelector('#npc-avatar').style.backgroundImage = `url('${path}')`
+  document.querySelector('#npc-chat-avatar').src = path
+}
+function showComms(){
+  document.querySelector('#npc').style.display = 'block'
+  toggleMessage(true)
+}
+function rentShip(){
+  setMessage(`You can rent a ship for 1 credit per million miles. You won't have to pay until you fill up with gas at a station. All pilots are required to have a commercial pilots license before they can rent a ship.`)
+  clearComms()
+  commsButton(`Agree`, addShip)
+  commsButton(`Cancel`, stationShipMenu)
+}
+function setBackgroundImage(image){
+  document.querySelector('#pilot-window').style.backgroundImage = `url('${image}')`
+}
+function toggleBGSway(bool = true) {
+  if(bool)
+    document.querySelector('#pilot-window').classList.add('sway-animation')
+  else
+    document.querySelector('#pilot-window').classList.remove('sway-animation')
+}
+function setAvatarTitle(title){
+  document.querySelector('#npc-name').textContent = title
+}
+function setAvatarSubtitle(subtitle) {
+  document.querySelector('#npc-dept').textContent = subtitle
+}
+function loadScreen(title, message, callback, timeout = 2000){
+  toggleAvatar(true)
+  clearComms()
+  setAvatarImage(`img/loader.gif`)
+  setBackgroundImage(`img/bg-transition.gif`)
+  setAvatarTitle(`Connecting to`)
+  setAvatarSubtitle(title)
+  setMessage(message)
+  setTimeout(callback, timeout)
+}
+function toggleMessage(on = true){
+  const log = document.querySelector('#log')
+  if(on) log.style.display = 'block'
+  else log.style.display = 'none'
+}
+function toggleAvatar(on) {
+  if(on) {
+    document.querySelector('#npc').style.display = 'block'
+    toggleMessage(true)
+  } else {
+    document.querySelector('#npc').style.display = 'none'
+    toggleMessage(false)
+  }
+}
+function addShip(){
+  if(player.pilotLicense) {
+    setMessage(`Let's see your pilots license. Everything looks in order here. `)
+    player.ship = true
+    toggleGuages(true)
+  } else {
+    setMessage(`You need to go to ${player.station.company} Main Office to get your pilot's license. You can buy one for 1000 credits.`)
+  }
+}
+function toggleGuages(on){
+  const fuel = document.querySelector('#fuel-guage')
+  if(on) fuel.style.visibility = 'visible'
+  else fuel .style.visibility = 'hidden'
+}
 
-startGame(0, 0, null, player.starID)
+startGame(spaceStations[0])
