@@ -98,7 +98,7 @@ function displayComms(avatar = 'img/loader.gif', name = 'Loading Contact...', de
     setMessage(message)
     if(bgImg) {
       setBackgroundImage(bgImg)
-      document.querySelector('#monitor').classList.remove('opacity-75')
+      toggleMonitorTransparency(false)
     }
     if(callback) callback()
   }, delay)
@@ -205,7 +205,7 @@ function generateShipName() {
     return `${words[0][Math.floor(rng()*words[0].length)]} ${words[1][Math.floor(rng()*words[1].length)]}`
 }
 function starportFuelRequest(){
-  document.querySelector('#monitor').classList.remove('opacity-75')
+  toggleMonitorTransparency(false)
   setAvatarImage(player.station.mechanicNPC.image)
   setAvatarTitle(player.station.mechanicNPC.name)
   setAvatarSubtitle(player.station.mechanicNPC.dept)
@@ -224,7 +224,7 @@ function starportFuelRequest(){
   }
   commsButton(`Refuel Ship`, starportFuelRequest)
   commsButton(`Rent Ship`, rentShip)
-  commsButton('Exit', ()=>{stationShipMenu(0)})
+  commsButton('Exit', stationShipMenu)
 }
 function fuelLevelAlert(){
   let message = `Danger. Fuel levels are critical. Shutting navigation system down. Recommend Sending a request signal for Emergency Fuel Services.`
@@ -259,6 +259,7 @@ function stationShipMenu(){
     `Attempting to connect to ${player.station.mechanicNPC.dept}.`, 
     ()=>{
       const message = `Welcome to the ${player.station.mechanicNPC.dept}. What can I do for you?`
+      toggleMonitorTransparency(false)
       setAvatarImage(player.station.mechanicNPC.image)
       setAvatarTitle(player.station.mechanicNPC.name)
       setAvatarSubtitle(player.station.mechanicNPC.dept)
@@ -273,11 +274,10 @@ function stationShipMenu(){
 }
 function stationJobMenu(delay = 2000, message){
   clearComms()
-  
   if(!message) message = `Welcome to ${player.station.company}. How can I help you?`
   player.station.jobs.forEach(job => {
     if(job.status == 'active') {
-      message = `How's that ${job.type} going? If you have an questions about the job check your ${job.jobStation.company} contract labeled ${job.destination.name} ${job.type} in your documents.`
+      message = `If you have an questions about your active job check your ${job.jobStation.company} contract labeled ${job.destination.name} ${job.type} in your documents.`
     }
   })
   displayComms(
@@ -286,30 +286,43 @@ function stationJobMenu(delay = 2000, message){
     player.station.company,
     message,
     ()=>{
+      player.location = player.station.company
+      player.jobs.forEach(job => {
+        if(job.destination.company == player.location) addCompleteJobBtn(job)
+      })
       player.station.jobs.forEach(job => {
         if(job.status == 'available')
           commsButton(`${job.destination.name} ${job.type}`, job.details)
       })
       if(!player.pilotLicense) commsButton(`${starSystem.name} Pilot License`, pilotLicense)
       commsButton('Exit', exitStation)
-      player.location = player.station.company
       documentsMenu()
       toggleBGSway(false)
     }, delay, player.station.jobNPC.bgImg
   )
 }
-function acceptJob(job){
-  displayComms(
-    player.station.jobNPC.image,
-    player.station.jobNPC.name,
-    player.station.jobNPC.dept,
-    `I've uploaded your contract data to your documents.`,
-    null, 0)
-  clearComms()
-  commsButton('Exit', ()=> stationJobMenu(0))
-  addJob(job)
-  document.querySelector('#active-jobs-header').style.display = 'block'
-  player.jobs.push(job)
+function acceptJob(job, doc){
+  if(player.pilotLicense) {
+    loadScreen(`Downloading Contract File`,`Processing ${job.type} Contract.`,()=>{
+      job.status = 'active'
+      addDoc(
+        doc.title,
+        doc.doc,
+        doc.image
+      )
+      toggleMonitorTransparency(false)
+      setAvatarImage(player.station.jobNPC.image)
+      setAvatarTitle(player.station.jobNPC.name)
+      setAvatarSubtitle(player.station.company)
+      setBackgroundImage(player.station.jobNPC.bgImg)
+      setMessage(`I've uploaded your contract data to your documents.`)
+      commsButton('Exit', ()=> stationJobMenu(0))
+      player.jobs.push(job)
+      document.querySelector('#active-jobs-header').style.display = 'block'
+    })
+  } else {
+    setMessage(`${player.station.company} requires a pilots license for delivery contracts. You can register for one here at our main office for 1000 credits.`)
+  }
 }
 function setMessage(message) {
   document.querySelector('#npc-message').innerHTML = message
@@ -389,19 +402,13 @@ function generateJob(jobStation){
     details: ()=>{
       let doc = {
         image: `img/sci-fi-data (${Math.floor(rng()*10)+1}).png`,
-        title: `${jobStation.company} Delivery Contract`,
+        title: `${job.destination.name} ${job.type} Contract`,
         doc: message
       }
       viewDoc(doc)
       clearComms()
-      commsButton('Accept', ()=> {
-        if(player.pilotLicense) {
-          job.status = 'active'
-          acceptJob(job)
-        } else {
-          setMessage(`${player.station.company} requires a pilots license for delivery contracts. You can register for one here at our main office for 1000 credits.`)
-        }
-      })
+      commsButton(`Job Contract`, job.details)
+      commsButton(`Accept Contract`, ()=> acceptJob(job, doc))
       commsButton('Cancel', ()=> stationJobMenu(0))
     },
     pay: pay,
@@ -504,46 +511,16 @@ function movePlayer(station, fuel = true) {
   } 
   let navigationInterval = requestAnimationFrame(animate);
 }
-function addJob(job){
-  const button = document.createElement('button')
-  button.classList.add('btn')
-  button.classList.add('btn-primary')
-  if(player.station == job.destination && player.location == job.destination.company) {
-    button.textContent = `Complete ${job.type}`
-    button.addEventListener('click', ()=>{
-      displayComms(
-        job.destination.jobNPC.image,
-        job.destination.jobNPC.name,
-        job.destination.company,
-        `You brought the data! I can finally login now. Thanks for delivering it here all the way from ${job.jobStation.name}.`,
-        ()=>{
-          player.jobs = remove(player.jobs, job)
-          updateCredits(job.pay)
-          documentsMenu()
-          job.jobStation.jobs.forEach(job => {
-            if (job === job) {
-              job.jobStation.jobs = remove(job.jobStation.jobs, job)
-              job.jobStation.jobs.push(generateJob(job.jobStation))
-            }
-          });
-        }
-      )
-    })
-  } else { //If the player clicks the document and not at the mission destination
-    button.textContent = `${job.destination.name} ${job.type}`
-    button.addEventListener('click', ()=>{
-      document.querySelector('#monitor').classList.add('opacity-75')
-      displayComms(
-        'img/loader.gif',
-        `${job.destination.name} ${job.type}`,
-        `${job.jobStation.company} Contract`,
-        job.info, 
-        null, 1    
-      )
-    })
+function addCompleteJobBtn(job){
+  if(job) {
+    if(player.station == job.destination && player.location == job.destination.company) {
+      commsButton(`Deliver Encrypted Data`,()=>{
+        loadScreen(`Encrypted Data Delivery`, 
+        `Delivering encrypted data to ${player.station.company}.`,
+        ()=>completeJob(job))
+      })
+    }
   }
-  document.querySelector('#active-jobs').appendChild(button)
-  return button
 }
 function startGame(station = null){
   hudTitle.textContent = starSystem.name
@@ -581,9 +558,6 @@ function documentsMenu(){
   }
   if(player.jobs.length || player.documents.length) {
     document.querySelector('#active-jobs-header').style.display = 'block'
-    player.jobs.forEach(job => {
-      addJob(job)
-    })
     player.documents.forEach(doc => {
       const button = document.createElement('button')
       button.classList.add('btn')
@@ -633,7 +607,7 @@ function exitStation(){
   toggleAvatar(false)
   clearComms()
   setBackgroundImage(`img/bg-transition.gif`)
-  document.querySelector('#monitor').classList.add('opacity-75')
+  toggleMonitorTransparency(true)
   setTimeout(()=>{
     setBackgroundImage(player.station.image)
     toggleBGSway(true)
@@ -678,14 +652,12 @@ function addDoc(title, doc, image){
   documentsMenu()
 }
 function viewDoc(doc){
-  document.querySelector('#monitor').classList.add('opacity-75')
-  displayComms(
-    doc.image,
-    `${doc.title}`,
-    `${player.name} Document`,
-    doc.doc, 
-    null, 1    
-  )
+  showComms()
+  toggleMonitorTransparency(true)
+  setAvatarImage(doc.image)
+  setAvatarTitle(doc.title)
+  setAvatarSubtitle(`Archived Document`)
+  setMessage(doc.doc)
 }
 function setAvatarImage(path){
   document.querySelector('#npc-avatar').style.backgroundImage = `url('${path}')`
@@ -724,7 +696,9 @@ function loadScreen(title, message, callback, timeout = 2000){
   setAvatarTitle(`Connecting to`)
   setAvatarSubtitle(title)
   setMessage(message)
-  setTimeout(callback, timeout)
+  setTimeout(()=>{
+    callback()
+  }, timeout)
 }
 function toggleMessage(on = true){
   const log = document.querySelector('#log')
@@ -748,11 +722,37 @@ function addShip(){
   } else {
     setMessage(`You need to go to ${player.station.company} Main Office to get your pilot's license. You can buy one for 1000 credits.`)
   }
+  clearComms()
+  commsButton('Refuel Ship', starportFuelRequest)
+  commsButton(`Rent Ship`, rentShip)
+  commsButton('Exit', exitStation)
 }
 function toggleGuages(on){
   const fuel = document.querySelector('#fuel-guage')
   if(on) fuel.style.visibility = 'visible'
   else fuel .style.visibility = 'hidden'
+}
+function toggleMonitorTransparency(on = true) {
+  let monitor = document.querySelector('#monitor')
+  if(on)  monitor.classList.add('opacity-75')
+  else    monitor.classList.remove('opacity-75')
+}
+function completeJob(job){
+  player.jobs = remove(player.jobs, job)
+  updateCredits(job.pay)
+  documentsMenu()
+  job.jobStation.jobs.forEach(job => {
+    if (job === job) {
+      job.jobStation.jobs = remove(job.jobStation.jobs, job)
+      job.jobStation.jobs.push(generateJob(job.jobStation))
+    }
+  })
+  setAvatarImage(job.destination.jobNPC.image)
+  setAvatarTitle(job.destination.jobNPC.name)
+  setAvatarSubtitle(job.destination.jobNPC.company)
+  setMessage(`You brought the data! I can finally login now. Thanks for delivering it here all the way from ${job.jobStation.name}.`)
+  setBackgroundImage(job.destination.jobNPC.bgImg)
+  commsButton(`Exit`, stationJobMenu)
 }
 
 startGame(spaceStations[0])
