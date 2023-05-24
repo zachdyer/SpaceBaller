@@ -36,6 +36,8 @@ let player = {
 let rng = new Math.seedrandom(player.starID)
 let starSystem = generateStarSystem(player.starID)
 let devMode = false
+const synthesis = window.speechSynthesis;
+synthesis.getVoices()
 
 function generateStation() {
   const spaceStationNames1 = pick(["Lunaris", "Stellar", "Nebula", "Galactic", "Astrocore", "Celestial", "Orion", "Cosmos", "Infinity", "Nova", "Serenity", "Quantum", "Interstellar", "Aurora", "Cosmic", "Pulsar", "Eclipse", "Astrostar", "Supernova", "Astroverse"]);
@@ -184,7 +186,7 @@ function emergencyFuelRequest() {
     emergencyFuelPilot.name,
     emergencyFuelPilot.dept,
     message, () => {
-      clearMenu()
+      clearActions()
       commsButton('Confirm', () => {
         let sentence = [
           "Fuel replenishment complete. You're good to go. Safe travels!",
@@ -202,7 +204,7 @@ function emergencyFuelRequest() {
         setMessage(`${sentence[Math.floor(Math.random() * sentence.length)]}`)
         player.credits - 10000
         player.setCredits(player.credits - 10000)
-        clearMenu()
+        clearActions()
         powerNavigation(true)
       })
       commsButton('Exit', emergencyServiceMenu)
@@ -233,11 +235,11 @@ function starportFuelRequest() {
 function fuelLevelAlert() {
   let message = `Danger. Fuel levels are critical. Shutting navigation system down. Recommend Sending a request signal for Emergency Fuel Services.`
   displayComms(player.image, player.shipName, player.shipModel, message)
-  clearMenu()
+  clearActions()
   commsButton('Send Emergency Distress Signal', emergencyServiceMenu)
   powerNavigation(false)
 }
-function clearMenu() {
+function clearActions() {
   while (shipComms.firstChild) {
     shipComms.removeChild(shipComms.firstChild);
   }
@@ -252,7 +254,7 @@ function commsButton(label, func, icon = null) {
   return button
 }
 function stationMainMenu() {
-  clearMenu()
+  clearActions()
   toggleAvatar(false)
   commsButton(player.station.mechanicNPC.dept, () => moveToStationArea(player.station.mechanicNPC.dept, shipyard), `bi bi-rocket-takeoff-fill`)
   commsButton(player.station.company, () => moveToStationArea(`${player.station.company} Main Office`, stationOffice), `bi bi-building-fill`)
@@ -308,12 +310,12 @@ function acceptJob(job) {
     setMessage(`${player.station.company} requires a pilots license for delivery contracts. You can register for one here at our main office for 1000 credits.`)
   }
 }
-function setMessage(message, voice = 0) {
+function setMessage(message, voice = 6) {
   toggleMessage(true)
   document.querySelector('#npc-message').innerHTML = message
   // Check if the browser supports speech synthesis
   if ('speechSynthesis' in window && !devMode) {
-    const synthesis = window.speechSynthesis;
+    // const synthesis = window.speechSynthesis;
     // Create a new SpeechSynthesisUtterance instance
     const utterance = new SpeechSynthesisUtterance();
     // Set the text to be spoken
@@ -330,7 +332,7 @@ function pick(list, procedural = true) {
     return list[Math.floor(Math.random() * list.length)]
 }
 function emergencyServiceMenu() {
-  clearMenu()
+  clearActions()
   displayComms(
     emergencyFuelPilot.image,
     emergencyFuelPilot.name,
@@ -344,13 +346,13 @@ function emergencyServiceMenu() {
   )
 }
 function emergencyTowRequest() {
-  clearMenu()
+  clearActions()
   setMessage(`To tow you to the nearest station costs 10000 credits.`)
   commsButton('Confirm', emergencyTow)
   commsButton('Exit', fuelLevelAlert)
 }
 function emergencyTow() {
-  clearMenu()
+  clearActions()
   setMessage(`Sit tight and away we go.`)
   let closestStation = spaceStations[0]
   for (let i = 1; i < spaceStations.length; i++) {
@@ -395,7 +397,7 @@ function generateJob(jobStation) {
   }
   let contract = {
     title: `${missionStation.name} ${type} Contract`,
-    doc: `<b>${jobStation.company} ${type} Contract</b><br>Pilot agrees to deliver ${jobStation.company} encrypted data to ${missionStation.company} for ${jobStation.payPerMillionMiles} credits per million miles traveled.<br>Contract Value: ${pay} credits.<br>Contractor Signature: ${jobStation.jobNPC.name}`,
+    desc: `<b>${jobStation.company} ${type} Contract</b><br>Pilot agrees to deliver ${jobStation.company} encrypted data to ${missionStation.company} for ${jobStation.payPerMillionMiles} credits per million miles traveled.<br>Contract Value: ${pay} credits.<br>Contractor Signature: ${jobStation.jobNPC.name}`,
     image: `img/sci-fi-data (${Math.floor(rng() * 10) + 1}).png`,
     type: `Contract`
   }
@@ -403,7 +405,7 @@ function generateJob(jobStation) {
     type: type,
     details: () => {
       setMessage(message)
-      clearMenu()
+      clearActions()
       commsButton(`View Job Contract`, () => viewItem(contract))
       commsButton(`Accept Contract`, () => acceptJob(job))
       commsButton('Cancel', stationOffice)
@@ -519,13 +521,14 @@ function navigateStation(area){
   listItems.forEach(item => {
     item.classList.remove('active');
   })
-  clearMenu()
-  setAvatarImage(`img/loader.gif`)
+  clearActions()
+  setAvatarImage(player.image)
   setBackgroundImage(`img/sci-fi-hallway.gif`)
   setAvatarTitle(`Navigating to`)
   setAvatarSubtitle(area.title)
   showNPC()
   toggleMessage(false)
+  toggleMonitorTransparency(false)
   function animate() {
     const velocity = (player.dockDistance < area.dockDistance) ? 1 : -1;
     if(devMode) player.dockDistance = area.dockDistance 
@@ -614,7 +617,8 @@ function startGame(station = null) {
     player.station = station
     player.starDistance = player.station.starDistance
     const bedroomArea = station.areas.find(area => area.title === 'Bedroom');
-    bedroomArea.npc.image = `img/sci-fi-pilot (${player.avatarID}).png`
+    player.image = `img/sci-fi-pilot (${player.avatarID}).png`
+    bedroomArea.npc.image = player.image
     bedroomArea.npc.name = player.name
     player.dockDistance = bedroomArea.dockDistance
     player.area = bedroomArea
@@ -644,15 +648,25 @@ function inventoryMenu() {
     activeJobs.removeChild(activeJobs.firstChild);
   }
   if (player.jobs.length || player.inventory.length) {
-    player.inventory.forEach(doc => {
-      const button = document.createElement('button')
-      button.classList.add('btn')
-      button.classList.add('btn-primary')
-      button.innerHTML = doc.title
-      button.addEventListener('click', () => viewItem(doc))
-      document.querySelector('#active-jobs').appendChild(button)
+    player.inventory.forEach(item => {
+      inventoryBtn(item)
     })
   }
+}
+function inventoryBtn(item) {
+  const button = document.createElement('button');
+  button.classList.add('btn');
+  button.classList.add('btn-primary');
+  if (item.icon) {
+    const icon = document.createElement('span');
+    icon.classList.add('bi', `bi-${item.icon}`, 'me-1');
+    button.appendChild(icon);
+  }
+  const title = document.createElement('span');
+  title.textContent = item.title;
+  button.appendChild(title);
+  button.addEventListener('click', () => viewItem(item));
+  document.querySelector('#active-jobs').appendChild(button);
 }
 function remove(array, element) {
   const result = array.filter(item => {
@@ -705,7 +719,7 @@ function launchShip() {
     setMessage(`You are gonna need some fuel in your before you can launch. You can buy some here in the shipyard.`)
   } else {
     toggleAvatar(false)
-    clearMenu()
+    clearActions()
     // toggleMonitorTransparency(true)
     loadScreen(
       player.station.name,
@@ -725,7 +739,7 @@ function pilotLicense() {
     setMessage(`Our records show you already have an active registered ${starSystem.name} pilot license.`)
   } else {
     setMessage(`The ${starSystem.name} Pilot License is required for commercial level flight in ${starSystem.name}. To register for a license you need to have your ${starSystem.name} ID Card and the registration fee of 1000 credits.`)
-    clearMenu()
+    clearActions()
     commsButton(`Purchase`, purchasePilotLicense)
     commsButton(`Back`, companyMenu)
   }
@@ -753,7 +767,8 @@ function registerPilotLicense() {
     issuerSignature: player.area.npc.name,
     issuer: player.station.company,
     code: generateID(),
-    image: `img/official-doc (${Math.floor(rng() * 4) + 1}).png`
+    image: `img/official-doc (${Math.floor(rng() * 4) + 1}).png`,
+    icon: `person-vcard-fill`
   }
   pilotLicense.desc = `<b>${starSystem.name} Commercial Pilot's License</b><br>License Holder's Name: ${player.name}<br>License Number: ${pilotLicense.code}<br>Issuer: ${pilotLicense.issuer}<br>Issuer Signature: ${pilotLicense.issuerSignature}`
   addItem(pilotLicense)
@@ -792,6 +807,9 @@ function viewItem(item) {
   setAvatarTitle(item.title)
   setAvatarSubtitle(`${item.type}`)
   setMessage(item.desc)
+  if(item.area) {
+    if(item.area == player.area) commsButton(`Deliver Package`, ()=>deliverPackage(item), `bi bi-box-seam-fill`)
+  }
 }
 function setAvatarImage(path) {
   document.querySelector('#npc-avatar').style.backgroundImage = `url('${path}')`
@@ -804,7 +822,7 @@ function showNPC() {
 function rentShip() {
   if(findItem(`${starSystem.name} Pilot License`)) {
     setMessage(`You can rent a ship for 1 credit per million miles. You won't have to pay until you fill up with gas at a station. All pilots are required to have a commercial pilots license before they can rent a ship.`)
-    clearMenu()
+    clearActions()
     commsButton(`Agree`, addShip)
     commsButton(`Cancel`, shipyard)
   } else {
@@ -828,7 +846,7 @@ function setAvatarSubtitle(subtitle) {
 }
 function loadScreen(title, message, callback, timeout = 2000) {
   toggleAvatar(true)
-  clearMenu()
+  clearActions()
   setAvatarImage(`img/loader.gif`)
   setBackgroundImage(`img/bg-transition.gif`)
   setAvatarTitle(`Connecting to`)
@@ -872,7 +890,7 @@ function toggleMonitorTransparency(on = true) {
   else monitor.classList.remove('opacity-75')
 }
 function completeJob(job) {
-  player.inventory = removeItem(job.contract.title)
+  player.inventory = removeItem(job)
   player.jobs = remove(player.jobs, job)
   updateCredits(job.pay)
   inventoryMenu()
@@ -891,7 +909,7 @@ function completeJob(job) {
 }
 function moveToStationArea(title, menu) {
   toggleAvatar(true)
-  clearMenu()
+  clearActions()
   setAvatarImage(`img/loader.gif`)
   setBackgroundImage(`img/sci-fi-hallway.gif`)
   setAvatarTitle(`Walking to`)
@@ -904,8 +922,9 @@ function moveToStationArea(title, menu) {
     navigationMenu()
   }, timeout)
 }
-function removeItem(title) {
-  return player.inventory.filter(item => item.title != title)
+function removeItem(item) {
+  player.inventory = player.inventory.filter(inventory => inventory !== item)
+  inventoryMenu()
 }
 function setPlayerLocation(location){
   player.location = location
@@ -919,91 +938,99 @@ function bedroom(){
   
 }
 function bedroomMenu(){
-  clearMenu()
+  clearActions()
   commsButton(`Next`, nextAvatar)
   commsButton(`Previous`, prevAvatar)
-  deliverPackageBtn()
 }
 function exitToRoom(){
   moveToStationArea(`${player.station.name} Bedroom`, bedroomMenu)
 }
 function shipyardMenu(){
-  clearMenu()
+  clearActions()
   commsButton('Refuel Ship', starportFuelRequest)
   commsButton(`Rent Ship`, rentShip)
   commsButton('Launch Ship', launchShip, 'bi bi-rocket-takeoff-fill')
-  deliverPackageBtn()
 }
 function companyMenu(){
-  clearMenu()
+  clearActions()
   commsButton(`Jobs`, jobMenu, 'bi bi-briefcase-fill')
   commsButton(`Pilot License`, pilotLicense, 'bi bi-airplane-fill')
-  deliverPackageBtn()
 }
 function jobMenu(){
-  clearMenu()
+  clearActions()
   player.station.jobs.forEach(job => {
     if (job.status == 'available')
       commsButton(`${job.destination.name} ${job.type}`, job.details, 'bi bi-database-fill-lock')
   })
 }
-function deliverPackage() {
-  const package = findItem(`Package Delivery`)
-  const loadingDocksArea = player.station.areas.find(area => area.title === "Loading Docks");
-  if(player.area == package.area) {
-    if(package.area.title === `Bedroom`) setMessage(`Looks like my package came early. Nice!`)
-    else setMessage(`That package matches our code ${package.id}. Thanks for bring it here from the Loading Docks. I'll be sure to put in a good word with ${loadingDocksArea.npc.name}.`)
-    player.inventory = removeItem(`Package Delivery`)
-    inventoryMenu()
-    updateCredits(package.area.dockDistance)
-  } else {
-    setMessage(`That code doesn't show up on my list. Check the package to make sure you have the right department.`)
+function deliverPackage(package) {
+  toggleMonitorTransparency(false)
+  setAvatarImage(player.area.npc.image)
+  if(package.area.title === `Bedroom`) {
+    setMessage(`Looks like my package came early. Nice!`)
+    bedroomMenu()
+  } else if(package.area.title === `Security Office`) {
+    setMessage(`Thanks, ${player.name}. Seems like we can never get enough guns in here.`)
+    securityOfficeMenu()
+  } else if(package.area.title === `Shipyard`) {
+    setMessage(`It seems we have some new components for the shipyard. These will definitely come in handy for our ongoing projects.`)
+    shipyardMenu()
+  } else if(package.area.title === player.station.company) {
+    setMessage(`It appears we have some important encrypted data here. These must be reviewed and filed accordingly.`)
+    companyMenu()
   }
-}
-function deliverPackageBtn(){
-  if(findItem(`Package Delivery`)) commsButton('Deliver Package', deliverPackage, 'bi bi-box-seam-fill')
+  updateCredits(package.area.dockDistance)
+  removeItem(package)
 }
 function loadingDocks(){
   toggleAvatar(true)
   toggleMonitorTransparency(false)
-  setMessage(`Welcome to the ${player.station.name} Loading Docks. Here you can find work and launch your ship from here.`)
+  setMessage(`Welcome to the ${player.station.name} Loading Docks. We have cargo we receive here at the loading docks that need to be delivered to various departments around ${player.station.name}. We pay credits to have them delivered. You can scan your ID card to be assigned to a package delivery.`)
   setAvatarTitle(player.area.title)
-  clearMenu()
-  commsButton('Jobs', loadingDockJobs)
-  commsButton('Exit', exitToRoom)
+  loadingDocksMenu()
 }
-function loadingDockJobs(){
-  setMessage(`We have cargo we receive here at the loading docks that need to be delivered to various departments around ${player.station.name}. We pay credits to have them delivered. The only thing we require is a ${starSystem.name} Office ID Card. You can scan your ID to be assigned to a package delivery.`)
-  clearMenu()
-  if(checkID()) commsButton(`Scan ID`, loadingDockIDScan)
-  commsButton('Back', loadingDocks)
+function loadingDocksMenu(){
+  clearActions()
+  commsButton('Scan ID Card', loadingDockIDScan, 'bi bi-upc-scan')
 }
 function loadingDockIDScan(){
-  viewItem(checkID())
-  clearMenu()
-  commsButton('Delivery Order', deliveryOrder)
-  commsButton('Back', loadingDocks)
+  if(checkID()) {
+    setMessage(`We have a package available for delivery.`)
+    deliveryOrder()
+  } else {
+    setMessage(`You don't have a valid Identification Card. You can get one at the Security Office.`)
+  }
 }
 function deliveryOrder(){
+  let package = generatePackage()
+  clearActions()
+  commsButton(package.title, ()=>pickUpPackage(package), 'bi bi-box-seam-fill')
+}
+function generatePackage(){
   const filteredAreas = player.station.areas.filter(area => area.title !== "Loading Docks");
   const randomIndex = Math.floor(Math.random() * filteredAreas.length);
   const area = filteredAreas[randomIndex]
   let package = {
-    title: `Package Delivery`,
     image: `img/sci-fi-package (${Math.floor(Math.random() * 14)+1}).png`,
     type: `Delivery Package`,
     area: area,
-    id: generateID()
+    id: generateID(),
+    icon: `box-seam-fill`
   }
+  package.title = `Package ${package.id}`,
   package.desc = `Deliver to: ${area.title}<br>Package ID: ${package.id}`
+  return package
+}
+function pickUpPackage(package){
+  clearActions()
   viewItem(package)
   addItem(package)
 }
 function mirrorView(){
   toggleMonitorTransparency(false)
   toggleAvatar(true)
-  clearMenu()
-  setAvatarImage(`img/sci-fi-pilot (${player.avatarID}).png`)
+  clearActions()
+  setAvatarImage(player.image)
   setAvatarTitle(player.name)
   setAvatarSubtitle(`Your Room`)
 }
@@ -1013,7 +1040,6 @@ function nextAvatar(){
   const playerAvatar = `img/sci-fi-pilot (${player.avatarID}).png`
   setAvatarImage(playerAvatar)
   player.area.npc.avatar = playerAvatar
-  setMessage(`How should I look today?`)
   toggleMonitorTransparency(false)
 }
 function prevAvatar(){
@@ -1022,7 +1048,6 @@ function prevAvatar(){
   const playerAvatar = `img/sci-fi-pilot (${player.avatarID}).png`
   setAvatarImage(playerAvatar)
   player.area.npc.avatar = playerAvatar
-  setMessage(`How should I look today?`)
   toggleMonitorTransparency(false)
 }
 function generateArea(facility, bgType, npcType, actions){
@@ -1082,26 +1107,25 @@ function generateName(npcType) {
   return `${first} ${last}`
 }
 function securityOffice() {
-  setMessage(`This is the ${player.station.name} Security office.`)
+  if(findItem(`Identification Card`)) {
+    setMessage(`Welcome back, ${player.name}. How's that security card working out for you? You should be able to work at the loading docks now. Check by there for work.`)
+  } else {
+    setMessage(`This is the ${player.station.name} Security office. You can register for an ID card here. The registration fee is 30 credits.`)
+  }
+  
   securityOfficeMenu()
 }
 function securityOfficeMenu(){
-  clearMenu()
-  commsButton(`Register ID Card`, registerID)
-  deliverPackageBtn()
+  clearActions()
+  commsButton(`Register ID Card`, registerID, 'bi bi-person-vcard')
 }
 function registerID(){
-  setMessage(`You can register for an ID card here. The registration fee is 30 credits.`)
-  clearMenu()
-  commsButton(`Fill out form`, idForm)
-}
-function idForm(){
-  if(player.id) {
+  if(findItem(`Identification Card`)) {
     setMessage(`Our records show you already have an active registered ${starSystem.name} Identification Card.`)
   } else {
     showModal(
       `${starSystem.name} ID Card`, 
-      `The ${starSystem.name} Identification card is required for working and in ${player.station.name}. The registration cost is 30 credits. Enter your name and confirm.`, 
+      `The ${starSystem.name} Identification card is required for working in ${player.station.name}. The registration cost is 30 credits. Enter your name and confirm.`, 
       registerIDCard
     )
     document.querySelector('#dialogue-text-input').classList.remove('d-none')
@@ -1113,15 +1137,15 @@ function registerIDCard(){
     title: `Identification Card`,
     type: `Government Document`,
     id: generateID(),
-    image: `img/official-doc (${Math.floor(rng()*4) + 1}).png`
+    image: `img/official-doc (${Math.floor(rng()*4) + 1}).png`,
+    icon: `person-vcard-fill`
   }
   card.desc = `<b>${starSystem.name} Official ID Card</b><br>Name: ${player.name}<br>ID#: ${card.id}`,
   addItem(card)
   closeModal()
   if(!devMode) updateCredits(-30)
   setMessage(`Congrats on getting your identification card. You can now qualify for delivery jobs in the station.`)
-  securityOfficeMenu()
-  player.id = true
+  player.name = document.querySelector('#dialogue-text-input').value
 }
 function checkID(){
   return findItem(`Identification Card`)
