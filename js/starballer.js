@@ -1,7 +1,6 @@
 let maxStarSystemImages = 5
 let hudTitle = document.querySelector('#hud-title')
 let hudLocation = document.querySelector('#hud-location')
-let navigation = document.querySelector('#navigation')
 let spaceStations = []
 let fuelTankCapacity = 5000
 let fuelLevel = 5000
@@ -24,15 +23,19 @@ let player = {
   },
   jobs: [],
   location: null,
-  documents: [],
+  inventory: [],
   ship: null,
   pilotLicense: null,
   name: `SpaceBaller`,
-  avatarID: 1
+  avatarID: 1,
+  dockDistance: 0,
+  speed: 1,
+  id: null,
+  area: null
 }
 let rng = new Math.seedrandom(player.starID)
 let starSystem = generateStarSystem(player.starID)
-const devMode = false
+let devMode = false
 
 function generateStation() {
   const spaceStationNames1 = pick(["Lunaris", "Stellar", "Nebula", "Galactic", "Astrocore", "Celestial", "Orion", "Cosmos", "Infinity", "Nova", "Serenity", "Quantum", "Interstellar", "Aurora", "Cosmic", "Pulsar", "Eclipse", "Astrostar", "Supernova", "Astroverse"]);
@@ -40,6 +43,14 @@ function generateStation() {
   const company = pick(["Systems", "Industrial", "Corporation", "Science", "Enterprises", "Union", "Core", "Tec", "Dynamic", "Industries", "Industry", "Commercial"])
   const stationName = `${spaceStationNames1} ${spaceStationNames2}`
   let companyName = `${stationName} ${company}`
+  let areas = [
+    generateArea(`Loading Docks`, `loading-docks`, `worker`, loadingDocks),
+    generateArea(`Shipyard`, `shipyard`, `worker`, shipyard),
+    generateArea(companyName, `office-bg`, `office`, stationOffice),
+    generateArea(`Bedroom`, `bedroom`, `pilot`, bedroom),
+    generateArea(`Security Office`, `office-bg`, `pilot`, securityOffice)
+  ]
+  areas.sort((a, b) => a.dockDistance - b.dockDistance);
   return {
     name: stationName,
     image: `img/space-station-${Math.floor(rng() * 7) + 1}.png`,
@@ -50,7 +61,7 @@ function generateStation() {
     company: companyName,
     payPerMillionMiles: Math.floor(rng() * 8) + 2,
     roomImg: `img/sci-fi-bedroom (${Math.floor(rng() * 13) + 1}).png`,
-    loadingDocksImg: `img/sci-fi-loading-docks (${Math.floor(rng() * 24) + 1}).png`
+    areas: areas
   }
 }
 function generateStarSystem(id) {
@@ -85,7 +96,7 @@ function setFuelLevel(amount) {
     fuelTankBar.style.width = `0%`
 }
 function displayComms(avatar = 'img/loader.gif', name = 'Loading Contact...', dept = 'Loading Info...', message = '', callback = null, delay = 2000, bgImg = null) {
-  showComms()
+  showNPC()
   setAvatarImage(`img/loader.gif`)
   if (bgImg) {
     setBackgroundImage(`img/bg-transition.gif`)
@@ -116,9 +127,9 @@ function generateNPC(type, procedural, dept = '', message = '', bgImg = null) {
     imgMax = 28
     imgPick = (procedural) ? Math.floor(rng() * imgMax) + 1 : Math.floor(Math.random() * imgMax) + 1
     npcName = (procedural) ? `${name1[Math.floor(rng() * name1.length)]} ${name2[Math.floor(rng() * name2.length)]}` : `${name1[Math.floor(Math.random() * name1.length)]} ${name2[Math.floor(Math.random() * name2.length)]}`
-  } else if (type == 'mechanic') {
-    name1 = ["Axel", "Sprocket", "Wrench", "Gizmo", "Spark", "Bolt", "Cog", "Ratchet", "Gear", "Spanner", "Socket", "Piston", "Widget", "Crux", "Machina"];
-    name2 = ["Cyber", "Tech", "Byte", "Circuit", "Nexus", "Matrix", "Drone", "Pulse", "Nano", "Vortex", "Probe", "Neon", "Synth", "Gadget", "Jolt"];
+  } else if (type == 'mechanic' || 'worker') {
+    name1 = ["Cyber", "Tech", "Byte", "Circuit", "Nexus", "Matrix", "Drone", "Pulse", "Nano", "Vortex", "Probe", "Neon", "Synth", "Gadget", "Jolt"]
+    name2 = ["Axel", "Sprocket", "Wrench", "Gizmo", "Spark", "Bolt", "Cog", "Ratchet", "Gear", "Spanner", "Socket", "Piston", "Widget", "Crux", "Machina"]
     imgMax = 9
     imgPick = (procedural) ? Math.floor(rng() * imgMax) + 1 : Math.floor(Math.random() * imgMax) + 1
     npcName = (procedural) ? `${name1[Math.floor(rng() * name1.length)]} ${name2[Math.floor(rng() * name2.length)]}` : `${name1[Math.floor(Math.random() * name1.length)]} ${name2[Math.floor(Math.random() * name2.length)]}`
@@ -201,8 +212,7 @@ function generateShipName() {
   let words = [
     ["Starfire", "Cosmosphere", "Astroblade", "Stellaris", "Galactron", "Nebula", "Celestial", "Interstellar", "Lunar", "Cosmic", "Orion's", "Nova", "Quantum", "Eclipse", "Astroscout", "Cosmic", "Infinity", "Stardust", "Hypernova", "Solar", "Aurora", "Spectrum", "Astroflux", "Celestia", "Astroverse"],
     ["Voyager", "Wing", "Phoenix", "Sentinel", "Serpent", "Fury", "Explorer", "Dawn", "Raider", "Crusader", "Falcon", "Voyager", "Flare", "Cosmos", "Nighthawk", "Horizon", "Supernova", "Nova", "Stargazer", "Nebulus", "Stellar", "Aether", "Elysium", "Orbiter", "Infinity"]
-  ];
-
+  ]
   return `${words[0][Math.floor(rng() * words[0].length)]} ${words[1][Math.floor(rng() * words[1].length)]}`
 }
 function starportFuelRequest() {
@@ -276,7 +286,7 @@ function stationOffice() {
   setAvatarTitle(player.station.jobNPC.name)
   setAvatarSubtitle(`${player.station.company} Main Office`)
   setMessage(message)
-  documentsMenu()
+  inventoryMenu()
   toggleBGSway(false)
   companyMenu()
 }
@@ -284,12 +294,7 @@ function acceptJob(job) {
   if (player.pilotLicense) {
     loadScreen(`Downloading Contract File`, `Processing ${job.type} Contract.`, () => {
       job.status = 'active'
-      addDoc(
-        job.contract.title,
-        job.contract.doc,
-        job.contract.image,
-        `Contract`
-      )
+      addItem(job)
       toggleMonitorTransparency(false)
       setAvatarImage(player.station.jobNPC.image)
       setAvatarTitle(player.station.jobNPC.name)
@@ -298,15 +303,25 @@ function acceptJob(job) {
       setMessage(`I've uploaded your contract data to your documents. If you have an questions about your active job check your ${job.jobStation.company} contract labeled ${job.destination.name} ${job.type} in your documents.`)
       commsButton('Exit', exitToRoom, 'bi bi-door-open-fill')
       player.jobs.push(job)
-      document.querySelector('#active-jobs-header').style.display = 'block'
     })
   } else {
     setMessage(`${player.station.company} requires a pilots license for delivery contracts. You can register for one here at our main office for 1000 credits.`)
   }
 }
-function setMessage(message) {
+function setMessage(message, voice = 0) {
   toggleMessage(true)
   document.querySelector('#npc-message').innerHTML = message
+  // Check if the browser supports speech synthesis
+  if ('speechSynthesis' in window && !devMode) {
+    const synthesis = window.speechSynthesis;
+    // Create a new SpeechSynthesisUtterance instance
+    const utterance = new SpeechSynthesisUtterance();
+    // Set the text to be spoken
+    utterance.text = message;
+    utterance.voice = synthesis.getVoices()[voice]; // choose 0 - 6
+    utterance.rate = 1.0; // Set the speech rate
+    synthesis.speak(utterance);
+  }
 }
 function pick(list, procedural = true) {
   if (procedural)
@@ -389,7 +404,7 @@ function generateJob(jobStation) {
     details: () => {
       setMessage(message)
       clearMenu()
-      commsButton(`View Job Contract`, () => viewDoc(contract))
+      commsButton(`View Job Contract`, () => viewItem(contract))
       commsButton(`Accept Contract`, () => acceptJob(job))
       commsButton('Cancel', stationOffice)
     },
@@ -422,43 +437,117 @@ function starportRefuel(cost) {
   navigationMenu()
 }
 function navigationMenu() {
+  const ul = document.querySelector('#navigation')
   // Clear navigation list
-  while (navigation.firstChild) {
-    navigation.removeChild(navigation.firstChild);
+  while (ul.firstChild) {
+    ul.removeChild(ul.firstChild);
   }
-  let closestStation = findClosestStation()
-  // Build and rebuild navigation list
-  spaceStations.forEach(station => {
+  if(player.location == player.station.name) {
+    let closestStation = findClosestStation()
+    // Build and rebuild navigation list
+    spaceStations.forEach(station => {
+      const li = document.createElement('li')
+      const stationInfo = document.createElement('span')
+      li.setAttribute('class', 'list-group-item d-flex justify-content-between align-items-center bg-dark text-bg-dark');
+      li.setAttribute('data-station-name', station.name);
+      li.setAttribute('data-station-distance', station.starDistance);
+      const distance = Math.abs(station.starDistance - player.starDistance)
+      stationInfo.textContent = `${station.name} ${distance} Mm`;
+      const button = document.createElement('button');
+      button.setAttribute('class', 'btn btn-primary float-end btn-navigate');
+      button.textContent = 'Navigate';
+      if (fuelLevel <= 0 || station == player.station || player.location != player.station.name) {
+        button.disabled = true
+      } else {
+        button.disabled = false
+      }
+      button.addEventListener('click', () => {
+        // Remove highlighting from all list items
+        const listItems = document.querySelectorAll('.list-group-item');
+        listItems.forEach(item => {
+          item.classList.remove('active');
+        })
+        toggleAvatar(false)
+        player.isInFlight = true
+        movePlayer(station)
+      })
+      li.appendChild(stationInfo);
+      if (player.ship) li.appendChild(button);
+      if (station == closestStation) li.classList.add('active')
+      ul.appendChild(li)
+    })
+  } else { // When player is in the station
+    stationNavigation()
+  }
+}
+function stationNavigation(){
+  const closestArea = findClosestArea()
+  const ul = document.querySelector('#navigation')
+  player.station.areas.forEach(area => {
     const li = document.createElement('li')
     const stationInfo = document.createElement('span')
     li.setAttribute('class', 'list-group-item d-flex justify-content-between align-items-center bg-dark text-bg-dark');
-    li.setAttribute('data-station-name', station.name);
-    li.setAttribute('data-station-distance', station.starDistance);
-    const distance = Math.abs(station.starDistance - player.starDistance)
-    stationInfo.textContent = `${station.name} ${distance} Mm`;
+    li.setAttribute('data-area-name', area.title);
+    li.setAttribute('data-area-distance', area.dockDistance)
+    const distance = Math.abs(area.dockDistance - player.dockDistance)
+    stationInfo.innerHTML = `${area.title} ${distance} m`;
     const button = document.createElement('button');
     button.setAttribute('class', 'btn btn-primary float-end btn-navigate');
-    button.textContent = 'Navigate';
-    if (fuelLevel <= 0 || station == player.station || player.location != player.station.name) {
-      button.disabled = true
-    } else {
-      button.disabled = false
-    }
-    button.addEventListener('click', () => {
-      // Remove highlighting from all list items
-      const listItems = document.querySelectorAll('.list-group-item');
-      listItems.forEach(item => {
-        item.classList.remove('active');
-      });
-      movePlayer(station)
-      toggleAvatar(false)
-      player.isInFlight = true
-    })
+    button.innerHTML = 'Navigate';
+    button.addEventListener('click', () => navigateStation(area))
     li.appendChild(stationInfo);
-    if (player.ship) li.appendChild(button);
-    if (station == closestStation) li.classList.add('active')
-    navigation.appendChild(li)
+    li.appendChild(button);
+    if (area == closestArea) li.classList.add('active')
+    ul.appendChild(li)
   })
+}
+function findClosestArea() {
+  let closestArea = null;
+  let closestDistance = Infinity;
+  player.station.areas.forEach(area => {
+    const distance = Math.abs(area.dockDistance - player.dockDistance);
+    if (distance < closestDistance) {
+      closestArea = area;
+      closestDistance = distance;
+    }
+  });
+  return closestArea;
+}
+function navigateStation(area){
+  // Remove highlighting from all list items
+  const listItems = document.querySelectorAll('.list-group-item');
+  listItems.forEach(item => {
+    item.classList.remove('active');
+  })
+  clearMenu()
+  setAvatarImage(`img/loader.gif`)
+  setBackgroundImage(`img/sci-fi-hallway.gif`)
+  setAvatarTitle(`Navigating to`)
+  setAvatarSubtitle(area.title)
+  showNPC()
+  toggleMessage(false)
+  function animate() {
+    const velocity = (player.dockDistance < area.dockDistance) ? 1 : -1;
+    if(devMode) player.dockDistance = area.dockDistance 
+    else player.dockDistance += velocity
+    if (Math.abs(area.dockDistance - player.dockDistance) < player.speed) { // When player arrives at area
+      player.dockDistance = area.dockDistance
+      player.area = area
+      setBackgroundImage(area.bgImg)
+      setPlayerLocation(area.title)
+      setAvatarImage(area.npc.image)
+      navigationMenu()
+      inventoryMenu()
+      showNPC()
+      toggleMonitorTransparency(false)
+      area.actions()
+    } else {
+      updateNavigator()
+      navigationMenu()
+      requestAnimationFrame(animate)
+    }
+  }
+  let navigationInterval = requestAnimationFrame(animate);
 }
 function movePlayer(station, fuel = true) {
   if(devMode) {
@@ -469,7 +558,7 @@ function movePlayer(station, fuel = true) {
     stationMainMenu()
     toggleAvatar(false)
     navigationMenu()
-    documentsMenu()
+    inventoryMenu()
   } else {
     warpView();
     player.isInFlight = true;
@@ -479,23 +568,23 @@ function movePlayer(station, fuel = true) {
     if (fuel) fuelTankBar.classList.add('progress-bar-animated');
     powerNavigation(true);
     function animate() {
-      player.starDistance += velocity;
-      hudLocation.textContent = station.name;
+      player.starDistance += velocity
+      hudLocation.textContent = station.name
       if (station.starDistance - player.starDistance === 0) {
-        setBackgroundImage(station.image);
-        player.isInFlight = false;
-        player.station = station;
+        setBackgroundImage(station.image)
+        player.isInFlight = false
+        player.station = station
         setPlayerLocation(station.name)
         stationMainMenu()
         toggleAvatar(false)
         fuelTankBar.classList.remove('progress-bar-animated')
-        navigationMenu();
-        documentsMenu();
+        navigationMenu()
+        inventoryMenu()
       } else {
-        updateNavigator();
-        navigationMenu();
-        if (fuel) setFuelLevel(fuelLevel - 1);
-        requestAnimationFrame(animate);
+        updateNavigator()
+        navigationMenu()
+        if (fuel) setFuelLevel(fuelLevel - 1)
+        requestAnimationFrame(animate)
       }
     }
     let navigationInterval = requestAnimationFrame(animate);
@@ -514,7 +603,7 @@ function addCompleteJobBtn(job) {
 }
 function startGame(station = null) {
   hudTitle.textContent = starSystem.name
-  setBackgroundImage(starSystem.image)
+  hudLocation.textContent = station.name
   spaceStations.forEach(station => {
     station.jobs.push(generateJob(station))
   })
@@ -524,9 +613,18 @@ function startGame(station = null) {
   if (station) { // if the player is at a station at the start it's in a room
     player.station = station
     player.starDistance = player.station.starDistance
-    roomMenu()
+    const bedroomArea = station.areas.find(area => area.title === 'Bedroom');
+    bedroomArea.npc.image = `img/sci-fi-pilot (${player.avatarID}).png`
+    bedroomArea.npc.name = player.name
+    player.dockDistance = bedroomArea.dockDistance
+    player.area = bedroomArea
+    bedroom()
+    toggleBGSway(false)
+    toggleAvatar(true)
+    toggleMonitorTransparency(false)
+  } else {
+    setBackgroundImage(starSystem.image)
   }
-  navigationMenu()
   // Closes the dialogue box
   document.querySelector('#dialogue-close').addEventListener('click', () => {
     document.querySelector('#dialogue-box').close();
@@ -535,26 +633,25 @@ function startGame(station = null) {
     toggleGuages(false)
     toggleBGSway(false)
   }
-  if(devMode) registerPilotLicense()
-  if(devMode) addShip()
+  // if(devMode) registerPilotLicense()
+  // if(devMode) addShip()
+  
+  navigationMenu()
 }
-function documentsMenu() {
+function inventoryMenu() {
   const activeJobs = document.querySelector('#active-jobs')
   while (activeJobs.firstChild) {
     activeJobs.removeChild(activeJobs.firstChild);
   }
-  if (player.jobs.length || player.documents.length) {
-    document.querySelector('#active-jobs-header').style.display = 'block'
-    player.documents.forEach(doc => {
+  if (player.jobs.length || player.inventory.length) {
+    player.inventory.forEach(doc => {
       const button = document.createElement('button')
       button.classList.add('btn')
       button.classList.add('btn-primary')
       button.innerHTML = doc.title
-      button.addEventListener('click', () => viewDoc(doc))
+      button.addEventListener('click', () => viewItem(doc))
       document.querySelector('#active-jobs').appendChild(button)
     })
-  } else {
-    document.querySelector('#active-jobs-header').style.display = 'none'
   }
 }
 function remove(array, element) {
@@ -564,20 +661,28 @@ function remove(array, element) {
   return result;
 }
 function showModal(title, message, confirm = null) {
-  const dialogueBox = document.querySelector('#dialogue-box')
-  dialogueBox.showModal()
-  document.querySelector('#dialogue-title').textContent = title
-  document.querySelector('#dialogue-message').textContent = message
-  const confirmBtn = document.querySelector('#dialogue-confirm')
+  const dialogueBox = document.querySelector('#dialogue-box');
+  dialogueBox.showModal();
+  document.querySelector('#dialogue-title').textContent = title;
+  document.querySelector('#dialogue-message').textContent = message;
+  const confirmBtn = document.querySelector('#dialogue-confirm');
+  // Define a function that wraps the confirm function and removes the event listener
+  const confirmHandler = () => {
+    if (confirm) {
+      confirm();
+      confirmBtn.removeEventListener('click', confirmHandler);
+    }
+  }
   if (confirm) {
-    confirmBtn.classList.remove('d-none')
-    confirmBtn.addEventListener('click', confirm)
+    confirmBtn.classList.remove('d-none');
+    confirmBtn.addEventListener('click', confirmHandler);
   } else {
-    confirmBtn.classList.add('d-none')
+    confirmBtn.classList.add('d-none');
   }
 }
 function updateCredits(amount) {
   player.setCredits(player.credits + amount)
+  hideModalInput()
   if (amount > 0) {
     showModal('CryptoCredits', `Your account was credited ${amount} credits.`)
   } else {
@@ -590,12 +695,12 @@ function findClosestStation() {
     if (Math.abs(station.starDistance - player.starDistance) < Math.abs(closestStation.starDistance - player.starDistance)) {
       closestStation = station;
     }
-  });
+  })
   return closestStation;
 }
 function launchShip() {
   if(!player.ship) {
-    setMessage(`Looks like you don't have a ship yet. You can rent one here at the shipyard.`)
+    setMessage(`Looks like you don't have a ship yet. You can rent one here at the loading docks.`)
   } else if(fuelLevel <= 0){
     setMessage(`You are gonna need some fuel in your before you can launch. You can buy some here in the shipyard.`)
   } else {
@@ -605,7 +710,7 @@ function launchShip() {
     loadScreen(
       player.station.name,
       `Launching ship...`,
-      ()=>{
+      () => {
         setBackgroundImage(player.station.image)
         toggleBGSway(true)
         setPlayerLocation(player.station.name)
@@ -619,41 +724,53 @@ function pilotLicense() {
   if(player.pilotLicense) {
     setMessage(`Our records show you already have an active registered ${starSystem.name} pilot license.`)
   } else {
-    setMessage(`A pilot license is required for commercial level flight in the ${starSystem.name} System. The registration cost is 1000 credits.`)
+    setMessage(`The ${starSystem.name} Pilot License is required for commercial level flight in ${starSystem.name}. To register for a license you need to have your ${starSystem.name} ID Card and the registration fee of 1000 credits.`)
     clearMenu()
     commsButton(`Purchase`, purchasePilotLicense)
     commsButton(`Back`, companyMenu)
   }
 }
 function purchasePilotLicense(){
+  hideModalInput()
   if(player.pilotLicense) {
     setMessage(`Our records show you already have an active registered ${starSystem.name} pilot license.`)
-  } else if (player.credits < 1000) {
-    setMessage(`I apologize. Your CryptoCredits declined. If you need a job that doesn't require pilot license, you can get one at the shipyard.`)
+  } else if (player.credits < 1000 && !devMode) {
+    setMessage(`I apologize. Your CryptoCredits declined. If you need a job that doesn't require pilot license, you can deliver packages at the loading docks.`)
+  } else if(checkID() == undefined && !devMode) {
+    setMessage(`The pilot license requires a valid ID. You can get one at the security office.`)
   } else {
-    showModal(`${starSystem.name} Pilot License`, `The ${starSystem.name} Pilot License is required for commercial level flight in ${starSystem.name}. The registration cost is 1000 credits. Enter your name and confirm.`, registerPilotLicense)
-    document.querySelector('#dialogue-text-input').classList.remove('d-none')
-    document.querySelector('#dialogue-text-input').value = player.name
+    showModal(
+      `${starSystem.name} Pilot License Agreement`, 
+      `The ${starSystem.name} Pilot License is required for commercial level flight in ${starSystem.name}. By registering you the a registration fee of 1000 credits.`,   registerPilotLicense
+    )
   }
 }
 function registerPilotLicense() {
-  const name = document.querySelector('#dialogue-text-input').value
-  player.name = name
-  player.pilotLicense = {
-    name: name,
+  let pilotLicense = {
+    title: `${starSystem.name} Pilot License`,
+    licensee: player.name,
     starSystem: starSystem.name,
-    signature: player.station.jobNPC.name,
+    issuerSignature: player.area.npc.name,
     issuer: player.station.company,
-    code: `COM-${player.station.starDistance}`
+    code: generateID(),
+    image: `img/official-doc (${Math.floor(rng() * 4) + 1}).png`
   }
-  hideModalInput()
+  pilotLicense.desc = `<b>${starSystem.name} Commercial Pilot's License</b><br>License Holder's Name: ${player.name}<br>License Number: ${pilotLicense.code}<br>Issuer: ${pilotLicense.issuer}<br>Issuer Signature: ${pilotLicense.issuerSignature}`
+  addItem(pilotLicense)
   closeModal()
   if(!devMode) updateCredits(-1000)
-  addDoc(`Pilot License`,
-    `<b>${player.pilotLicense.starSystem} Commercial Pilot's License</b><br>License Holder's Name: ${name}<br>License Number: ${player.pilotLicense.code}<br>Issuer: ${player.pilotLicense.issuer}<br>Issuer Signature: ${player.pilotLicense.signature}`,
-    `img/official-doc (${Math.floor(rng() * 4) + 1}).png`, `Government`)
   setMessage(`Congrats, ${player.name}! I've registered your pilot license into the ${starSystem.name} archives and your application has already been approved. You should receive your pilots license in your documents soon.`)
-  stationOffice()
+  companyMenu()
+}
+function generateID() {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const length = 10;
+  let id = '';
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * characters.length);
+    id += characters.charAt(randomIndex);
+  }
+  return id;
 }
 function closeModal() {
   document.querySelector('#dialogue-box').close();
@@ -664,29 +781,28 @@ function hideModalInput() {
 function showModalInput() {
   document.querySelector('#dialogue-text-input').classList.remove('d-none')
 }
-function addDoc(title, doc, image, type) {
-  player.documents.push({ title: title, doc: doc, image: image, type: type })
-  documentsMenu()
+function addItem(item) {
+  player.inventory.push(item)
+  inventoryMenu()
 }
-function viewDoc(doc) {
-  if(player.location)
-  showComms()
+function viewItem(item) {
+  showNPC()
   toggleMonitorTransparency(true)
-  setAvatarImage(doc.image)
-  setAvatarTitle(doc.title)
-  setAvatarSubtitle(`${doc.type} Document`)
-  setMessage(doc.doc)
+  setAvatarImage(item.image)
+  setAvatarTitle(item.title)
+  setAvatarSubtitle(`${item.type}`)
+  setMessage(item.desc)
 }
 function setAvatarImage(path) {
   document.querySelector('#npc-avatar').style.backgroundImage = `url('${path}')`
   document.querySelector('#npc-chat-avatar').src = path
 }
-function showComms() {
+function showNPC() {
   document.querySelector('#npc').style.display = 'block'
   toggleMessage(true)
 }
 function rentShip() {
-  if(player.pilotLicense) {
+  if(findItem(`${starSystem.name} Pilot License`)) {
     setMessage(`You can rent a ship for 1 credit per million miles. You won't have to pay until you fill up with gas at a station. All pilots are required to have a commercial pilots license before they can rent a ship.`)
     clearMenu()
     commsButton(`Agree`, addShip)
@@ -756,11 +872,10 @@ function toggleMonitorTransparency(on = true) {
   else monitor.classList.remove('opacity-75')
 }
 function completeJob(job) {
-  console.log(job.contract)
-  player.documents = removeDoc(job.contract)
+  player.inventory = removeItem(job.contract.title)
   player.jobs = remove(player.jobs, job)
   updateCredits(job.pay)
-  documentsMenu()
+  inventoryMenu()
   job.jobStation.jobs.forEach(contract => {
     if (contract == job) {
       job.jobStation.jobs = remove(job.jobStation.jobs, job)
@@ -789,39 +904,41 @@ function moveToStationArea(title, menu) {
     navigationMenu()
   }, timeout)
 }
-function removeDoc(doc) {
-  return player.documents.filter(item => item.doc != doc.doc);
+function removeItem(title) {
+  return player.inventory.filter(item => item.title != title)
 }
 function setPlayerLocation(location){
   player.location = location
-  hudLocation.textContent = player.location
 }
-function roomMenu(){
-  clearMenu()
-  toggleAvatar(false)
-  commsButton(`Look in the mirror`, mirrorView, `bi bi-eye-fill`)
-  commsButton(`Loading Docks`, () => moveToStationArea(`Loading Docks`, loadingDocks), `bi bi-box-seam-fill`)
-  commsButton(player.station.mechanicNPC.dept, () => moveToStationArea(player.station.mechanicNPC.dept, shipyard), `bi bi-rocket-fill`)
-  commsButton(player.station.company, () => moveToStationArea(`${player.station.company} Main Office`, stationOffice), `bi bi-building-fill`)
+function bedroom(){
+  setPlayerLocation(`Bedroom`)
   setBackgroundImage(player.station.roomImg)
-  toggleBGSway(false)
-  setPlayerLocation(`${player.station.name} Room`)
+  mirrorView()
+  setMessage(`How should I look today?`)
+  bedroomMenu()
+  
+}
+function bedroomMenu(){
+  clearMenu()
+  commsButton(`Next`, nextAvatar)
+  commsButton(`Previous`, prevAvatar)
+  deliverPackageBtn()
 }
 function exitToRoom(){
-  moveToStationArea(`${player.station.name} Bedroom`, roomMenu)
+  moveToStationArea(`${player.station.name} Bedroom`, bedroomMenu)
 }
 function shipyardMenu(){
   clearMenu()
   commsButton('Refuel Ship', starportFuelRequest)
   commsButton(`Rent Ship`, rentShip)
   commsButton('Launch Ship', launchShip, 'bi bi-rocket-takeoff-fill')
-  commsButton('Exit', exitToRoom, 'bi bi-door-open-fill')
+  deliverPackageBtn()
 }
 function companyMenu(){
   clearMenu()
   commsButton(`Jobs`, jobMenu, 'bi bi-briefcase-fill')
   commsButton(`Pilot License`, pilotLicense, 'bi bi-airplane-fill')
-  commsButton('Exit', exitToRoom, 'bi bi-door-open-fill')
+  deliverPackageBtn()
 }
 function jobMenu(){
   clearMenu()
@@ -829,44 +946,188 @@ function jobMenu(){
     if (job.status == 'available')
       commsButton(`${job.destination.name} ${job.type}`, job.details, 'bi bi-database-fill-lock')
   })
-  commsButton('Back', companyMenu, 'bi bi-arrow-left')
+}
+function deliverPackage() {
+  const package = findItem(`Package Delivery`)
+  const loadingDocksArea = player.station.areas.find(area => area.title === "Loading Docks");
+  if(player.area == package.area) {
+    if(package.area.title === `Bedroom`) setMessage(`Looks like my package came early. Nice!`)
+    else setMessage(`That package matches our code ${package.id}. Thanks for bring it here from the Loading Docks. I'll be sure to put in a good word with ${loadingDocksArea.npc.name}.`)
+    player.inventory = removeItem(`Package Delivery`)
+    inventoryMenu()
+    updateCredits(package.area.dockDistance)
+  } else {
+    setMessage(`That code doesn't show up on my list. Check the package to make sure you have the right department.`)
+  }
+}
+function deliverPackageBtn(){
+  if(findItem(`Package Delivery`)) commsButton('Deliver Package', deliverPackage, 'bi bi-box-seam-fill')
 }
 function loadingDocks(){
-  toggleAvatar(false)
-  setBackgroundImage(player.station.loadingDocksImg)
+  toggleAvatar(true)
+  toggleMonitorTransparency(false)
+  setMessage(`Welcome to the ${player.station.name} Loading Docks. Here you can find work and launch your ship from here.`)
+  setAvatarTitle(player.area.title)
   clearMenu()
   commsButton('Jobs', loadingDockJobs)
   commsButton('Exit', exitToRoom)
 }
 function loadingDockJobs(){
+  setMessage(`We have cargo we receive here at the loading docks that need to be delivered to various departments around ${player.station.name}. We pay credits to have them delivered. The only thing we require is a ${starSystem.name} Office ID Card. You can scan your ID to be assigned to a package delivery.`)
   clearMenu()
-  commsButton(`Delivery Job`, loadingDockJob)
+  if(checkID()) commsButton(`Scan ID`, loadingDockIDScan)
   commsButton('Back', loadingDocks)
 }
-function loadingDockJob(){
-
+function loadingDockIDScan(){
+  viewItem(checkID())
+  clearMenu()
+  commsButton('Delivery Order', deliveryOrder)
+  commsButton('Back', loadingDocks)
+}
+function deliveryOrder(){
+  const filteredAreas = player.station.areas.filter(area => area.title !== "Loading Docks");
+  const randomIndex = Math.floor(Math.random() * filteredAreas.length);
+  const area = filteredAreas[randomIndex]
+  let package = {
+    title: `Package Delivery`,
+    image: `img/sci-fi-package (${Math.floor(Math.random() * 14)+1}).png`,
+    type: `Delivery Package`,
+    area: area,
+    id: generateID()
+  }
+  package.desc = `Deliver to: ${area.title}<br>Package ID: ${package.id}`
+  viewItem(package)
+  addItem(package)
 }
 function mirrorView(){
   toggleMonitorTransparency(false)
   toggleAvatar(true)
-  setMessage(`How should I look today?`)
   clearMenu()
   setAvatarImage(`img/sci-fi-pilot (${player.avatarID}).png`)
-  commsButton(`Next`, nextAvatar)
-  commsButton(`Previous`, prevAvatar)
-  commsButton(`Confirm`, roomMenu)
-  setAvatarTitle(`Looking into the mirror`)
-  setAvatarSubtitle(``)
+  setAvatarTitle(player.name)
+  setAvatarSubtitle(`Your Room`)
 }
 function nextAvatar(){
   player.avatarID++
   if(player.avatarID > 79) player.avatarID = 1
-  setAvatarImage(`img/sci-fi-pilot (${player.avatarID}).png`)
+  const playerAvatar = `img/sci-fi-pilot (${player.avatarID}).png`
+  setAvatarImage(playerAvatar)
+  player.area.npc.avatar = playerAvatar
+  setMessage(`How should I look today?`)
+  toggleMonitorTransparency(false)
 }
 function prevAvatar(){
   player.avatarID--
   if(player.avatarID < 1) player.avatarID = 79
-  setAvatarImage(`img/sci-fi-pilot (${player.avatarID}).png`)
+  const playerAvatar = `img/sci-fi-pilot (${player.avatarID}).png`
+  setAvatarImage(playerAvatar)
+  player.area.npc.avatar = playerAvatar
+  setMessage(`How should I look today?`)
+  toggleMonitorTransparency(false)
+}
+function generateArea(facility, bgType, npcType, actions){
+  let bgImgMax = 0
+  switch(bgType) {
+    case 'loading-docks':
+      bgImgMax = 24
+      break
+    case 'shipyard':
+      bgImgMax = 13
+      break
+    case 'office-bg':
+      bgImgMax = 22
+      break
+  }
+  let npcImgMax = 0
+  switch(npcType) {
+    case 'worker':
+      npcImgMax = 25
+      break
+    case 'pilot':
+      npcImgMax = 79
+      break
+    case 'office':
+      npcImgMax = 25
+      break
+  }
+  let area = {
+    title: facility, 
+    dockDistance: (bgType == `loading-docks`) ? 0 : Math.floor(rng() * 1000), 
+    bgImg: `img/sci-fi-${bgType} (${Math.floor(rng() * bgImgMax) + 1}).png`,
+    actions: actions,
+    npc: {
+      name: generateName(npcType),
+      image: `img/sci-fi-${npcType} (${Math.floor(rng() * npcImgMax) + 1}).png`
+    }
+  }
+  return area
+}
+function generateName(npcType) {
+  let first = null
+  let last = null
+  switch(npcType) {
+    case 'worker':
+      first = pick(["Cyber", "Tech", "Byte", "Circuit", "Nexus", "Matrix", "Drone", "Pulse", "Nano", "Vortex", "Probe", "Neon", "Synth", "Gadget", "Jolt"])
+      last = pick(["Axel", "Sprocket", "Wrench", "Gizmo", "Spark", "Bolt", "Cog", "Ratchet", "Gear", "Spanner", "Socket", "Piston", "Widget", "Crux", "Machina"])
+      break
+    case 'pilot':
+      first = pick(["Max", "Stella", "Aurora", "Jet", "Nova", "Rex", "Luna", "Cosmo", "Zara", "Orion", "Vega", "Nyx", "Apollo", "Nova", "Stellar", "Raven", "Galaxy", "Axel", "Celeste", "Blaze"]);
+      last = pick(["Nova", "Orion", "Blaze", "Phoenix", "Starstrider", "Nebula", "Stardust", "Falcon", "Warpwind", "Skyslicer", "Starfire", "Shadowpilot", "Starwing", "Nebulon", "Eclipse", "Starwind", "Stardancer", "Novaheart", "Starfrost", "Starglider"]);
+      break
+    case 'office': 
+      first = pick(["Xander", "Luna", "Nyx", "Stella", "Nova", "Astra", "Zephyr", "Cyber", "Nebula", "Galaxy", "Cosmo", "Orion", "Serenity", "Celeste", "Raven", "Axel", "Aurora", "Blaze Nebula", "Phoenix", "Vega"]);
+      last = pick(["Drake", "Vega", "Orion", "Steele", "Nexus", "Frost", "Silver", "Haze", "Nano", "Swift", "Stone", "Neon", "Starling", "Moon", "Nova", 'Eclipse', 'Mercury', 'Steel', 'Jetstream']);
+      break
+  }
+  return `${first} ${last}`
+}
+function securityOffice() {
+  setMessage(`This is the ${player.station.name} Security office.`)
+  securityOfficeMenu()
+}
+function securityOfficeMenu(){
+  clearMenu()
+  commsButton(`Register ID Card`, registerID)
+  deliverPackageBtn()
+}
+function registerID(){
+  setMessage(`You can register for an ID card here. The registration fee is 30 credits.`)
+  clearMenu()
+  commsButton(`Fill out form`, idForm)
+}
+function idForm(){
+  if(player.id) {
+    setMessage(`Our records show you already have an active registered ${starSystem.name} Identification Card.`)
+  } else {
+    showModal(
+      `${starSystem.name} ID Card`, 
+      `The ${starSystem.name} Identification card is required for working and in ${player.station.name}. The registration cost is 30 credits. Enter your name and confirm.`, 
+      registerIDCard
+    )
+    document.querySelector('#dialogue-text-input').classList.remove('d-none')
+    document.querySelector('#dialogue-text-input').value = player.name
+  }
+}
+function registerIDCard(){
+  const card = {
+    title: `Identification Card`,
+    type: `Government Document`,
+    id: generateID(),
+    image: `img/official-doc (${Math.floor(rng()*4) + 1}).png`
+  }
+  card.desc = `<b>${starSystem.name} Official ID Card</b><br>Name: ${player.name}<br>ID#: ${card.id}`,
+  addItem(card)
+  closeModal()
+  if(!devMode) updateCredits(-30)
+  setMessage(`Congrats on getting your identification card. You can now qualify for delivery jobs in the station.`)
+  securityOfficeMenu()
+  player.id = true
+}
+function checkID(){
+  return findItem(`Identification Card`)
+}
+function findItem(title) {
+  return player.inventory.find(item => item.title === title)
 }
 
 startGame(spaceStations[0])

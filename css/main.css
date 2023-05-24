@@ -90,6 +90,9 @@ body {
   background-color: rgb(13, 49, 13);
   color:rgb(34, 136, 34)
 }
+#dialogue-box {
+  width: 500px;
+}
  
 
 @keyframes sway {
