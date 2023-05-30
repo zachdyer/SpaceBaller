@@ -967,7 +967,7 @@ function deliverPackage(package) {
   toggleMonitorTransparency(false)
   setAvatarImage(player.area.npc.image)
   if(package.area.title === `Bedroom`) {
-    setMessage(`Looks like my package came early. Nice!`)
+    setMessage(`My Spaceweed package arrived early. Nice!`)
     bedroomMenu()
   } else if(package.area.title === `Security Office`) {
     setMessage(`Thanks, ${player.name}. Seems like we can never get enough guns in here.`)
@@ -1040,6 +1040,7 @@ function nextAvatar(){
   const playerAvatar = `img/sci-fi-pilot (${player.avatarID}).png`
   setAvatarImage(playerAvatar)
   player.area.npc.avatar = playerAvatar
+  player.image = playerAvatar
   toggleMonitorTransparency(false)
 }
 function prevAvatar(){
@@ -1048,6 +1049,7 @@ function prevAvatar(){
   const playerAvatar = `img/sci-fi-pilot (${player.avatarID}).png`
   setAvatarImage(playerAvatar)
   player.area.npc.avatar = playerAvatar
+  player.image = playerAvatar
   toggleMonitorTransparency(false)
 }
 function generateArea(facility, bgType, npcType, actions){
