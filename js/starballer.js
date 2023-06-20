@@ -1,31 +1,18 @@
-let maxStarSystemImages = 5
-let hudTitle = document.querySelector('#hud-title')
-let hudLocation = document.querySelector('#hud-location')
-let spaceStations = []
-let fuelTankCapacity = 5000
-let fuelLevel = 5000
-let fuelTankBar = document.querySelector('#fuel-tank')
-let emergencyFuelPilot = generateNPC('pilot', false, 'Emergency Fuel Services')
-const shipComms = document.querySelector('#ship-comms')
-const credits = document.querySelector('#credits')
+let devMode = false
+const seed = 3
+const rng = new Math.seedrandom(seed)
 let player = {
+  name: 'StarBaller',
+  starSystem: generateStarSystem(seed),
   starDistance: 0,
-  starID: 3,
   image: `img/player-spaceship-3.png`,
-  shipName: 'StarBaller',
-  shipModel: 'Planetary Cruiser',
   station: null,
   isInFlight: false,
   credits: 100,
-  setCredits: (amount) => {
-    player.credits = amount
-    credits.textContent = player.credits
-  },
   jobs: [],
   location: null,
   inventory: [],
   ship: null,
-  pilotLicense: null,
   name: `SpaceBaller`,
   avatarID: 1,
   dockDistance: 0,
@@ -33,12 +20,56 @@ let player = {
   id: null,
   area: null
 }
-let rng = new Math.seedrandom(player.starID)
-let starSystem = generateStarSystem(player.starID)
-let devMode = false
+let ship = {
+  fuelLevel: 5000,
+  fuelCompacity: 5000,
+  model: 'StarCruizer',
+  name: 'StarBaller',
+  launched: false,
+  rented: false
+}
 const synthesis = window.speechSynthesis;
 synthesis.getVoices()
+let station = player.starSystem.stations[0]
+setTitle(player.starSystem.name)
+setSubtitle(station.name)
+player.starSystem.stations.forEach(station => {
+  station.jobs.push(generateJob(station))
+})
+if(ship.launched) {
+  if (ship.fuelLevel == 0) {
+    fuelLevelAlert()
+  }
+}
+if (station) { // if the player is at a station at the start it's in a room
+  player.station = station
+  player.starDistance = player.station.starDistance
+  const bedroomArea = station.areas.find(area => area.title === 'Bedroom');
+  player.image = `img/sci-fi-pilot (${player.avatarID}).png`
+  bedroomArea.npc.image = player.image
+  bedroomArea.npc.name = player.name
+  player.dockDistance = bedroomArea.dockDistance
+  player.area = bedroomArea
+  bedroom()
+  toggleBGSway(false)
+  toggleAvatar(true)
+  toggleMonitorTransparency(false)
+} else {
+  setBackgroundImage(player.starSystem.image)
+}
+// Closes the dialogue box
+document.querySelector('#dialogue-close').addEventListener('click', () => {
+  document.querySelector('#dialogue-box').close();
+})
+if (!ship) {
+  toggleGuages(false)
+  toggleBGSway(false)
+}
+navigationMenu()
 
+function setTitle(text){
+  document.querySelector('#hud-title').textContent = text
+}
 function generateStation() {
   const spaceStationNames1 = pick(["Lunaris", "Stellar", "Nebula", "Galactic", "Astrocore", "Celestial", "Orion", "Cosmos", "Infinity", "Nova", "Serenity", "Quantum", "Interstellar", "Aurora", "Cosmic", "Pulsar", "Eclipse", "Astrostar", "Supernova", "Astroverse"]);
   const spaceStationNames2 = pick(["Station", "Nexus", "Prime", "Horizon", "Citadel", "Outpost", "Haven", "Orbital", "Command", "Vertex", "Hub", "Base", "Sanctuary", "Observatory", "Gateway", "Spire", "Expanse", "Fortress", "Refuge", "Center"]);
@@ -67,7 +98,9 @@ function generateStation() {
   }
 }
 function generateStarSystem(id) {
-  let rng = new Math.seedrandom(id)
+  let spaceStations = []
+  const maxStarSystemImages = 5
+  const rng = new Math.seedrandom(id)
   const word1 = ["Alpha", "Sirius", "Betelgeuse", "Proxima", "Vega", "Polaris", "Antares", "Deneb", "Epsilon", "Tau", "Wolf", "Kepler", "Trappist", "Gliese", "HD", "Eta", "Zeta", "Sagittarius", "Cygnus", "Orion"];
   const word2 = ["Eridani", "Ceti", "359", "186", "1", "581", "209458", "Carinae", "Reticuli", "A*", "X-1", "Nebula"];
   const totalStations = Math.floor(rng() * 10) + 2
@@ -77,9 +110,11 @@ function generateStarSystem(id) {
   // Sort stations by star distance
   spaceStations.sort((a, b) => a.starDistance - b.starDistance);
   return {
+    id: id,
     name: `${word1[Math.floor(rng() * word1.length)]} ${word2[Math.floor(rng() * word2.length)]}`,
     image: `img/star-system-${Math.floor(rng() * maxStarSystemImages) + 1}.png`,
-    stations: spaceStations
+    stations: spaceStations,
+    emergencyFuelPilot: generateNPC('pilot', false, 'Emergency Fuel Services')
   }
 }
 function updateNavigator() {
@@ -91,9 +126,10 @@ function updateNavigator() {
   });
 }
 function setFuelLevel(amount) {
-  fuelLevel = amount
+  let fuelTankBar = document.querySelector('#fuel-tank')
+  ship.fuelLevel = amount
   if (amount)
-    fuelTankBar.style.width = `${Math.floor(amount / fuelTankCapacity * 100)}%`
+    fuelTankBar.style.width = `${Math.floor(amount / ship.fuelTankCapacity * 100)}%`
   else
     fuelTankBar.style.width = `0%`
 }
@@ -182,9 +218,9 @@ function emergencyFuelRequest() {
   ]
   let message = `${pick(sentence[0], false)} ${pick(sentence[1], false)} The cost is 10,000 credits for a full tank of gas.`
   displayComms(
-    emergencyFuelPilot.image,
-    emergencyFuelPilot.name,
-    emergencyFuelPilot.dept,
+    player.starSystem.emergencyFuelPilot.image,
+    player.starSystem.emergencyFuelPilot.name,
+    player.starSystem.emergencyFuelPilot.dept,
     message, () => {
       clearActions()
       commsButton('Confirm', () => {
@@ -200,10 +236,9 @@ function emergencyFuelRequest() {
           "Refueling complete. Your ship is fueled up and ready for action.",
           "Fueling process completed. Ready for departure. Have a stellar journey!"
         ]
-        setFuelLevel(fuelTankCapacity)
+        setFuelLevel(ship.fuelTankCapacity)
         setMessage(`${sentence[Math.floor(Math.random() * sentence.length)]}`)
-        player.credits - 10000
-        player.setCredits(player.credits - 10000)
+        updateCredits(-10000)
         clearActions()
         powerNavigation(true)
       })
@@ -219,8 +254,8 @@ function generateShipName() {
 }
 function starportFuelRequest() {
   toggleMonitorTransparency(false)
-  if (player.ship) {
-    let mileage = fuelTankCapacity - fuelLevel
+  if (ship) {
+    let mileage = ship.fuelTankCapacity - ship.fuelLevel
     let estimate = mileage * 2
     if (mileage > 0) {
       setMessage(`Your odometer reads ${mileage} million miles. The cost of NovaFuel per gallon is 1 credit. And the rental is 1 credit per million miles. Total cost for the rental and gas is ${estimate} credits.`)
@@ -234,12 +269,13 @@ function starportFuelRequest() {
 }
 function fuelLevelAlert() {
   let message = `Danger. Fuel levels are critical. Shutting navigation system down. Recommend Sending a request signal for Emergency Fuel Services.`
-  displayComms(player.image, player.shipName, player.shipModel, message)
+  displayComms(player.image, ship.name, ship.model, message)
   clearActions()
   commsButton('Send Emergency Distress Signal', emergencyServiceMenu)
   powerNavigation(false)
 }
 function clearActions() {
+  const shipComms = document.querySelector('#ship-comms')
   while (shipComms.firstChild) {
     shipComms.removeChild(shipComms.firstChild);
   }
@@ -250,14 +286,32 @@ function commsButton(label, func, icon = null) {
   button.classList.add('btn-primary')
   button.innerHTML = (icon) ? `<i class="${icon}"></i> ${label}` : label
   button.addEventListener('click', func)
-  shipComms.appendChild(button)
+  document.querySelector('#ship-comms').appendChild(button)
   return button
 }
 function stationMainMenu() {
   clearActions()
   toggleAvatar(false)
-  commsButton(player.station.mechanicNPC.dept, () => moveToStationArea(player.station.mechanicNPC.dept, shipyard), `bi bi-rocket-takeoff-fill`)
-  commsButton(player.station.company, () => moveToStationArea(`${player.station.company} Main Office`, stationOffice), `bi bi-building-fill`)
+  commsButton(`Request Docking`, requestDocking, `bi bi-rocket-fill`)
+}
+function requestDocking(){
+  const npc = player.station.areas[0].npc
+  setAvatarImage(npc.image)
+  setAvatarTitle(npc.name)
+  setAvatarSubtitle(`Loading Docks`)
+  toggleAvatar(true)
+  setMessage(`Welcome to ${player.station.name}. The docking fee is 50 credits and includes room and board.`)
+  clearActions()
+  commsButton(`Pay 50 credits`, payDocking, `bi bi-currency-bitcoin`)
+}
+function payDocking(){
+  if(!devMode) updateCredits(-50)
+  loadScreen(`Docking at ${player.station.name}`, 
+  ``, 
+  loadingDocks)
+  ship.launched = false
+  player.dockDistance = 0
+  player.area = player.station.areas[0]
 }
 function shipyard() {
   const message = `Welcome to the ${player.station.mechanicNPC.dept}. What can I do for you?`
@@ -293,7 +347,7 @@ function stationOffice() {
   companyMenu()
 }
 function acceptJob(job) {
-  if (player.pilotLicense) {
+  if (checkPilotLicense()) {
     loadScreen(`Downloading Contract File`, `Processing ${job.type} Contract.`, () => {
       job.status = 'active'
       addItem(job)
@@ -334,9 +388,9 @@ function pick(list, procedural = true) {
 function emergencyServiceMenu() {
   clearActions()
   displayComms(
-    emergencyFuelPilot.image,
-    emergencyFuelPilot.name,
-    emergencyFuelPilot.dept,
+    player.starSystem.emergencyFuelPilot.image,
+    player.starSystem.emergencyFuelPilot.name,
+    player.starSystem.emergencyFuelPilot.dept,
     `I have recieved your emergency signal. How can I help you?`,
     () => {
       commsButton('Request Tow Service', emergencyTowRequest)
@@ -355,7 +409,7 @@ function emergencyTow() {
   clearActions()
   setMessage(`Sit tight and away we go.`)
   let closestStation = spaceStations[0]
-  for (let i = 1; i < spaceStations.length; i++) {
+  for (let i = 1; i < player.starSystem.stations.length; i++) {
     let stationDistance = Math.abs(spaceStations[i].starDistance - player.starDistance)
     if (stationDistance < Math.abs(closestStation.starDistance - player.starDistance)) {
       closestStation = spaceStations[i]
@@ -389,7 +443,7 @@ function generateJob(jobStation) {
   let pay = 0
   let missionStation
   if (type == 'Data Delivery') {
-    let availableStations = spaceStations.filter((station) => station != jobStation)
+    let availableStations = player.starSystem.stations.filter((station) => station != jobStation)
     missionStation = pick(availableStations, false)
     let totalDistance = Math.abs(missionStation.starDistance - jobStation.starDistance)
     pay = totalDistance * jobStation.payPerMillionMiles
@@ -421,7 +475,7 @@ function generateJob(jobStation) {
   return job
 }
 function starportRefuel(cost) {
-  setFuelLevel(fuelTankCapacity)
+  setFuelLevel(ship.fuelTankCapacity)
   let sentence = [
     "Fuel replenishment complete. You're good to go. Safe travels!",
     "Refueling successful. Your fuel tanks are fully replenished.",
@@ -444,10 +498,10 @@ function navigationMenu() {
   while (ul.firstChild) {
     ul.removeChild(ul.firstChild);
   }
-  if(player.location == player.station.name) {
+  if(ship.launched) {
     let closestStation = findClosestStation()
     // Build and rebuild navigation list
-    spaceStations.forEach(station => {
+    player.starSystem.stations.forEach(station => {
       const li = document.createElement('li')
       const stationInfo = document.createElement('span')
       li.setAttribute('class', 'list-group-item d-flex justify-content-between align-items-center bg-dark text-bg-dark');
@@ -458,7 +512,7 @@ function navigationMenu() {
       const button = document.createElement('button');
       button.setAttribute('class', 'btn btn-primary float-end btn-navigate');
       button.textContent = 'Navigate';
-      if (fuelLevel <= 0 || station == player.station || player.location != player.station.name) {
+      if (ship.fuelLevel <= 0 || station == player.station || player.location != player.station.name) {
         button.disabled = true
       } else {
         button.disabled = false
@@ -474,7 +528,7 @@ function navigationMenu() {
         movePlayer(station)
       })
       li.appendChild(stationInfo);
-      if (player.ship) li.appendChild(button);
+      if (ship) li.appendChild(button);
       if (station == closestStation) li.classList.add('active')
       ul.appendChild(li)
     })
@@ -553,8 +607,10 @@ function navigateStation(area){
   let navigationInterval = requestAnimationFrame(animate);
 }
 function movePlayer(station, fuel = true) {
+  let fuelTankBar = document.querySelector('#fuel-tank')
   if(devMode) {
     player.starDistance = station.starDistance
+    player.dockDistance = 0
     setBackgroundImage(station.image);
     player.station = station;
     setPlayerLocation(station.name)
@@ -572,7 +628,6 @@ function movePlayer(station, fuel = true) {
     powerNavigation(true);
     function animate() {
       player.starDistance += velocity
-      hudLocation.textContent = station.name
       if (station.starDistance - player.starDistance === 0) {
         setBackgroundImage(station.image)
         player.isInFlight = false
@@ -586,7 +641,7 @@ function movePlayer(station, fuel = true) {
       } else {
         updateNavigator()
         navigationMenu()
-        if (fuel) setFuelLevel(fuelLevel - 1)
+        if (fuel) setFuelLevel(ship.fuelLevel - 1)
         requestAnimationFrame(animate)
       }
     }
@@ -603,44 +658,6 @@ function addCompleteJobBtn(job) {
       }, 'bi bi-database-fill-lock')
     }
   }
-}
-function startGame(station = null) {
-  hudTitle.textContent = starSystem.name
-  hudLocation.textContent = station.name
-  spaceStations.forEach(station => {
-    station.jobs.push(generateJob(station))
-  })
-  setFuelLevel(fuelLevel)
-  if (fuelLevel == 0) fuelLevelAlert()
-  player.setCredits(player.credits)
-  if (station) { // if the player is at a station at the start it's in a room
-    player.station = station
-    player.starDistance = player.station.starDistance
-    const bedroomArea = station.areas.find(area => area.title === 'Bedroom');
-    player.image = `img/sci-fi-pilot (${player.avatarID}).png`
-    bedroomArea.npc.image = player.image
-    bedroomArea.npc.name = player.name
-    player.dockDistance = bedroomArea.dockDistance
-    player.area = bedroomArea
-    bedroom()
-    toggleBGSway(false)
-    toggleAvatar(true)
-    toggleMonitorTransparency(false)
-  } else {
-    setBackgroundImage(starSystem.image)
-  }
-  // Closes the dialogue box
-  document.querySelector('#dialogue-close').addEventListener('click', () => {
-    document.querySelector('#dialogue-box').close();
-  })
-  if (!player.ship) {
-    toggleGuages(false)
-    toggleBGSway(false)
-  }
-  // if(devMode) registerPilotLicense()
-  // if(devMode) addShip()
-  
-  navigationMenu()
 }
 function inventoryMenu() {
   const activeJobs = document.querySelector('#active-jobs')
@@ -695,7 +712,9 @@ function showModal(title, message, confirm = null) {
   }
 }
 function updateCredits(amount) {
-  player.setCredits(player.credits + amount)
+  const credits = document.querySelector('#credits')
+  player.credits += amount
+  credits.textContent = player.credits
   hideModalInput()
   if (amount > 0) {
     showModal('CryptoCredits', `Your account was credited ${amount} credits.`)
@@ -704,8 +723,8 @@ function updateCredits(amount) {
   }
 }
 function findClosestStation() {
-  let closestStation = spaceStations[0];
-  spaceStations.forEach(station => {
+  let closestStation = player.starSystem.stations[0];
+  player.starSystem.stations.forEach(station => {
     if (Math.abs(station.starDistance - player.starDistance) < Math.abs(closestStation.starDistance - player.starDistance)) {
       closestStation = station;
     }
@@ -713,14 +732,14 @@ function findClosestStation() {
   return closestStation;
 }
 function launchShip() {
-  if(!player.ship) {
+  if(!ship.rented) {
     setMessage(`Looks like you don't have a ship yet. You can rent one here at the loading docks.`)
-  } else if(fuelLevel <= 0){
+  } else if(ship.fuelLevel <= 0){
     setMessage(`You are gonna need some fuel in your before you can launch. You can buy some here in the shipyard.`)
   } else {
+    ship.launched = true 
     toggleAvatar(false)
     clearActions()
-    // toggleMonitorTransparency(true)
     loadScreen(
       player.station.name,
       `Launching ship...`,
@@ -735,10 +754,10 @@ function launchShip() {
   }
 }
 function pilotLicense() {
-  if(player.pilotLicense) {
-    setMessage(`Our records show you already have an active registered ${starSystem.name} pilot license.`)
+  if(checkPilotLicense()) {
+    setMessage(`Our records show you already have an active registered ${player.starSystem.name} pilot license.`)
   } else {
-    setMessage(`The ${starSystem.name} Pilot License is required for commercial level flight in ${starSystem.name}. To register for a license you need to have your ${starSystem.name} ID Card and the registration fee of 1000 credits.`)
+    setMessage(`The ${player.starSystem.name} Pilot License is required for commercial level flight in ${player.starSystem.name}. To register for a license you need to have your ${player.starSystem.name} ID Card and the registration fee of 1000 credits.`)
     clearActions()
     commsButton(`Purchase`, purchasePilotLicense)
     commsButton(`Back`, companyMenu)
@@ -746,35 +765,35 @@ function pilotLicense() {
 }
 function purchasePilotLicense(){
   hideModalInput()
-  if(player.pilotLicense) {
-    setMessage(`Our records show you already have an active registered ${starSystem.name} pilot license.`)
+  if(checkPilotLicense()) {
+    setMessage(`Our records show you already have an active registered ${player.starSystem.name} pilot license.`)
   } else if (player.credits < 1000 && !devMode) {
     setMessage(`I apologize. Your CryptoCredits declined. If you need a job that doesn't require pilot license, you can deliver packages at the loading docks.`)
   } else if(checkID() == undefined && !devMode) {
     setMessage(`The pilot license requires a valid ID. You can get one at the security office.`)
   } else {
     showModal(
-      `${starSystem.name} Pilot License Agreement`, 
-      `The ${starSystem.name} Pilot License is required for commercial level flight in ${starSystem.name}. By registering you the a registration fee of 1000 credits.`,   registerPilotLicense
+      `${player.starSystem.name} Pilot License Agreement`, 
+      `The ${player.starSystem.name} Pilot License is required for commercial level flight in ${player.starSystem.name}. By registering you the a registration fee of 1000 credits.`,   registerPilotLicense
     )
   }
 }
 function registerPilotLicense() {
   let pilotLicense = {
-    title: `${starSystem.name} Pilot License`,
+    title: `${player.starSystem.name} Pilot License`,
     licensee: player.name,
-    starSystem: starSystem.name,
+    starSystem: player.starSystem.name,
     issuerSignature: player.area.npc.name,
     issuer: player.station.company,
     code: generateID(),
     image: `img/official-doc (${Math.floor(rng() * 4) + 1}).png`,
     icon: `person-vcard-fill`
   }
-  pilotLicense.desc = `<b>${starSystem.name} Commercial Pilot's License</b><br>License Holder's Name: ${player.name}<br>License Number: ${pilotLicense.code}<br>Issuer: ${pilotLicense.issuer}<br>Issuer Signature: ${pilotLicense.issuerSignature}`
+  pilotLicense.desc = `<b>${player.starSystem.name} Commercial Pilot's License</b><br>License Holder's Name: ${player.name}<br>License Number: ${pilotLicense.code}<br>Issuer: ${pilotLicense.issuer}<br>Issuer Signature: ${pilotLicense.issuerSignature}`
   addItem(pilotLicense)
   closeModal()
   if(!devMode) updateCredits(-1000)
-  setMessage(`Congrats, ${player.name}! I've registered your pilot license into the ${starSystem.name} archives and your application has already been approved. You should receive your pilots license in your documents soon.`)
+  setMessage(`Congrats, ${player.name}! I've registered your pilot license into the ${player.starSystem.name} archives and your application has already been approved. You should receive your pilots license in your documents soon.`)
   companyMenu()
 }
 function generateID() {
@@ -807,8 +826,14 @@ function viewItem(item) {
   setAvatarTitle(item.title)
   setAvatarSubtitle(`${item.type}`)
   setMessage(item.desc)
+  console.log(item.area)
   if(item.area) {
-    if(item.area == player.area) commsButton(`Deliver Package`, ()=>deliverPackage(item), `bi bi-box-seam-fill`)
+    if(item.area == player.area) {
+      if(!item.ready) {
+        item.ready = true
+        commsButton(`Deliver Package`, ()=>deliverPackage(item), `bi bi-box-seam-fill`)
+      }
+    }
   }
 }
 function setAvatarImage(path) {
@@ -820,7 +845,7 @@ function showNPC() {
   toggleMessage(true)
 }
 function rentShip() {
-  if(findItem(`${starSystem.name} Pilot License`)) {
+  if(findItem(`${player.starSystem.name} Pilot License`)) {
     setMessage(`You can rent a ship for 1 credit per million miles. You won't have to pay until you fill up with gas at a station. All pilots are required to have a commercial pilots license before they can rent a ship.`)
     clearActions()
     commsButton(`Agree`, addShip)
@@ -874,10 +899,10 @@ function toggleAvatar(on) {
 }
 function addShip() {
   setMessage(`Let's see your pilots license. Everything looks in order here. `)
-  player.ship = true
   navigationMenu()
   toggleGuages(true)
   shipyardMenu()
+  ship.rented = true
 }
 function toggleGuages(on) {
   const fuel = document.querySelector('#fuel-guage')
@@ -967,6 +992,7 @@ function deliverPackage(package) {
   toggleMonitorTransparency(false)
   setAvatarImage(player.area.npc.image)
   if(package.area.title === `Bedroom`) {
+    setAvatarImage(player.image)
     setMessage(`My Spaceweed package arrived early. Nice!`)
     bedroomMenu()
   } else if(package.area.title === `Security Office`) {
@@ -979,15 +1005,24 @@ function deliverPackage(package) {
     setMessage(`It appears we have some important encrypted data here. These must be reviewed and filed accordingly.`)
     companyMenu()
   }
-  updateCredits(package.area.dockDistance)
+  updateCredits(package.pay)
   removeItem(package)
 }
 function loadingDocks(){
   toggleAvatar(true)
   toggleMonitorTransparency(false)
   setMessage(`Welcome to the ${player.station.name} Loading Docks. We have cargo we receive here at the loading docks that need to be delivered to various departments around ${player.station.name}. We pay credits to have them delivered. You can scan your ID card to be assigned to a package delivery.`)
-  setAvatarTitle(player.area.title)
+  setAvatarTitle(player.area.npc.name)
+  setAvatarSubtitle(player.area.npc.subtitle)
+  setAvatarImage(player.area.npc.image)
+  setBackgroundImage(player.area.bgImg)
   loadingDocksMenu()
+  toggleBGSway(false)
+  setSubtitle(player.location)
+}
+function updateLocation(location){
+  player.location = location
+  navigationMenu()
 }
 function loadingDocksMenu(){
   clearActions()
@@ -1002,27 +1037,69 @@ function loadingDockIDScan(){
   }
 }
 function deliveryOrder(){
-  let package = generatePackage()
+  const localPackage = generateLocalPackage()
+  const stationPackage = generateStationPackage()
   clearActions()
-  commsButton(package.title, ()=>pickUpPackage(package), 'bi bi-box-seam-fill')
+  const localPackageBtn = commsButton(localPackage.title, ()=>{
+    pickUpPackage(localPackage)
+    localPackageBtn.remove()
+  }, 'bi bi-box-seam-fill')
+  const stationPackageBtn = commsButton(stationPackage.title, ()=>{
+    if(checkPilotLicense()) {
+      pickUpPackage(stationPackage)
+      stationPackageBtn.remove()
+    } else {
+      setAvatarImage(player.area.npc.image)
+      setAvatarTitle(player.area.npc.name)
+      setAvatarSubtitle(`Loading Docks Manager`)
+      setMessage(`This job requires a Pilot's License. You can get one at the main office.`)
+      toggleMonitorTransparency(false)
+    }
+    
+  }, 'bi bi-box-seam-fill')
 }
-function generatePackage(){
+function generateLocalPackage(){
   const filteredAreas = player.station.areas.filter(area => area.title !== "Loading Docks");
   const randomIndex = Math.floor(Math.random() * filteredAreas.length);
   const area = filteredAreas[randomIndex]
   let package = {
     image: `img/sci-fi-package (${Math.floor(Math.random() * 14)+1}).png`,
-    type: `Delivery Package`,
+    type: `Local Delivery Package`,
     area: area,
     id: generateID(),
-    icon: `box-seam-fill`
+    icon: `box-seam-fill`,
+    pay: area.dockDistance,
+    pilotLicense: false
   }
-  package.title = `Package ${package.id}`,
-  package.desc = `Deliver to: ${area.title}<br>Package ID: ${package.id}`
+  package.title = `${player.station.name} Package ${package.id}`,
+  package.desc = `Deliver to: ${player.station.name} ${area.title}<br>Package ID: ${package.id}<br>Credits: ${package.pay}`
   return package
 }
-function pickUpPackage(package){
-  clearActions()
+function generateStationPackage(){
+  const station = pickRandomStation(player.station)
+  const filteredAreas = station.areas.filter(area => area.title !== "Loading Docks");
+  const randomIndex = Math.floor(Math.random() * filteredAreas.length);
+  const area = filteredAreas[randomIndex]
+  let package = {
+    image: `img/sci-fi-package (${Math.floor(Math.random() * 14)+1}).png`,
+    type: `Station Delivery Package`,
+    area: area,
+    id: generateID(),
+    icon: `box-seam-fill`,
+    pay: area.dockDistance + Math.abs(station.starDistance - player.station.starDistance),
+    pilotLicense: true
+  }
+  package.title = `${station.name} Package ${package.id}`,
+  package.desc = `Deliver to: ${station.name} ${area.title}<br>Package ID: ${package.id}`
+  return package
+}
+function pickRandomStation(station) {
+  const stations = player.starSystem.stations.filter(item => item !== station);
+  const randomIndex = Math.floor(Math.random() * stations.length);
+  return stations[randomIndex];
+}
+function pickUpPackage(package, btn){
+  // clearActions()
   viewItem(package)
   addItem(package)
 }
@@ -1054,15 +1131,19 @@ function prevAvatar(){
 }
 function generateArea(facility, bgType, npcType, actions){
   let bgImgMax = 0
+  let dept = `Manager`
   switch(bgType) {
     case 'loading-docks':
       bgImgMax = 24
+      dept = `Loading Docks Manager`
       break
     case 'shipyard':
       bgImgMax = 13
+      dept = `Shipyard Supervisor`
       break
     case 'office-bg':
       bgImgMax = 22
+      dept = `Front Desk`
       break
   }
   let npcImgMax = 0
@@ -1082,10 +1163,7 @@ function generateArea(facility, bgType, npcType, actions){
     dockDistance: (bgType == `loading-docks`) ? 0 : Math.floor(rng() * 1000), 
     bgImg: `img/sci-fi-${bgType} (${Math.floor(rng() * bgImgMax) + 1}).png`,
     actions: actions,
-    npc: {
-      name: generateName(npcType),
-      image: `img/sci-fi-${npcType} (${Math.floor(rng() * npcImgMax) + 1}).png`
-    }
+    npc: generateNPC(npcType, true, dept, '', `img/sci-fi-${bgType} (${Math.floor(rng() * bgImgMax) + 1}).png`, )
   }
   return area
 }
@@ -1123,11 +1201,11 @@ function securityOfficeMenu(){
 }
 function registerID(){
   if(findItem(`Identification Card`)) {
-    setMessage(`Our records show you already have an active registered ${starSystem.name} Identification Card.`)
+    setMessage(`Our records show you already have an active registered ${player.starSystem.name} Identification Card.`)
   } else {
     showModal(
-      `${starSystem.name} ID Card`, 
-      `The ${starSystem.name} Identification card is required for working in ${player.station.name}. The registration cost is 30 credits. Enter your name and confirm.`, 
+      `${player.starSystem.name} ID Card`, 
+      `The ${player.starSystem.name} Identification card is required for working in ${player.station.name}. The registration cost is 30 credits. Enter your name and confirm.`, 
       registerIDCard
     )
     document.querySelector('#dialogue-text-input').classList.remove('d-none')
@@ -1142,7 +1220,7 @@ function registerIDCard(){
     image: `img/official-doc (${Math.floor(rng()*4) + 1}).png`,
     icon: `person-vcard-fill`
   }
-  card.desc = `<b>${starSystem.name} Official ID Card</b><br>Name: ${player.name}<br>ID#: ${card.id}`,
+  card.desc = `<b>${player.starSystem.name} Official ID Card</b><br>Name: ${player.name}<br>ID#: ${card.id}`,
   addItem(card)
   closeModal()
   if(!devMode) updateCredits(-30)
@@ -1155,5 +1233,12 @@ function checkID(){
 function findItem(title) {
   return player.inventory.find(item => item.title === title)
 }
-
-startGame(spaceStations[0])
+function checkPilotLicense(){
+  if(findItem(`${player.starSystem.name} Pilot License`))
+    return true
+  else
+    return false
+}
+function setSubtitle(text) {
+  document.querySelector('#hud-location').textContent = text
+}
