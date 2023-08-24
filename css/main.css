@@ -57,6 +57,7 @@ body {
 }
 #npc-avatar {
   background-size: cover;
+  max-height: 350px;
 }
 #active-jobs-header {
   display: none;
