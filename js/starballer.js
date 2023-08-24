@@ -66,6 +66,7 @@ if (!ship) {
   toggleBGSway(false)
 }
 navigationMenu()
+document.querySelector('#credits').textContent = player.credits
 
 function setTitle(text){
   document.querySelector('#hud-title').textContent = text
